@@ -86,4 +86,6 @@ The method is defined as `resolveArtifact(String groupId, String artifactId, Str
 - classifier is typically null, javadoc, sources, dist etc
 - extension could be pom, jar, zip etc.
 - version is the same as the <version> tag in the pom.xml
+
+
 For a more elaborate explanation see [the maven documentation](https://maven.apache.org/pom.html)
