@@ -46,7 +46,13 @@ import java.net.URLClassLoader;
 import java.util.*;
 
 /**
- * High level api to use maven programmatically
+ * High level api to use maven programmatically.
+ * There are basically three different type of usages:
+ * <ol>
+ *   <li>Building (invoking) maven by using the runMaven static method</li>
+ *   <li>Parsing the pom file to do various actions such as get the ClassLoader or resolve and get the Set of dependencies</li>
+ *   <li>Get a particular artifact from the list of remote repositories (or from local if more recent) by using the resolveArtifact method</li>
+ * </ol>
  */
 public class MavenUtils {
 
@@ -64,8 +70,14 @@ public class MavenUtils {
   }
 
   /**
-   *
-   * @param remoteRepositories a list of RemoteRepositories to use for Maven pom operations
+   * A Remote repository is created as follows:
+   * <code>
+   * new org.eclipse.aether.repository.RemoteRepository
+   *  .Builder("central", "default", "https://repo1.maven.org/maven2/")
+   *  .build();
+   * </code>
+   *  The argument to Builder are String id, String type, String url. See {@link org.eclipse.aether.repository.RemoteRepository.Builder}
+   * @param remoteRepositories a list of RemoteRepositories to use for Maven pom operations.
    */
   public MavenUtils(List<RemoteRepository> remoteRepositories) {
     this.remoteRepositories = remoteRepositories;
