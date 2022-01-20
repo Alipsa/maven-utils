@@ -44,9 +44,9 @@ The arguments to `runMaven(final File pomFile, String[] mvnArgs,
 Note that maven need to be installed locally for the maven invoker which is used to run maven to work. MavenUtils will first 
 look for the MAVEN_HOME system property, then for the MAVEN_HOME environment variable and if still not found will try to locate
 the mvn command in the PATH. 
+<hr />
 
-
-For the methods below an instance of MavenUtils must be created. This allows you to pass in
+For the methods below, an instance of MavenUtils must be created. This allows you to pass in
 a list of RemoteRepositories used for the resolution. If you use the default constructor (as in the examples below)
 you get the Maven Central and BeDatadriven repositories.
 
