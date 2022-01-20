@@ -76,7 +76,9 @@ public class MavenUtils {
    *  .Builder("central", "default", "https://repo1.maven.org/maven2/")
    *  .build();
    * </code>
-   *  The argument to Builder are String id, String type, String url. See {@link org.eclipse.aether.repository.RemoteRepository.Builder}
+   *  The argument to Builder are String id, String type, String url.
+   *  @see <a href="https://javadoc.io/static/org.eclipse.aether/aether-api/1.1.0/org/eclipse/aether/repository/RemoteRepository.Builder.html">
+   *    org.eclipse.aether.repository.RemoteRepository.Builder</a>
    * @param remoteRepositories a list of RemoteRepositories to use for Maven pom operations.
    */
   public MavenUtils(List<RemoteRepository> remoteRepositories) {
