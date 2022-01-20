@@ -138,4 +138,4 @@ User for unit testing. Licence: MIT
 ## Version history
 
 ### v1.0.0
-Initial implementation, heavily based on similar functionality in the Ride (https://github.com/perNyfelt/ride) project.
+Initial implementation, heavily based on similar functionality in the [Ride](https://github.com/perNyfelt/ride) project.
