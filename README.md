@@ -9,6 +9,17 @@ Use it by adding the dependency to your maven pom:
     <version>1.0.0-SNAPSHOT</version>
 </dependency>
 ```
+For SNAPSHOT builds you need to have snapshots enabled for the sonatype snapshots repo. Production releases are available 
+in maven central so no repository configuration is needed.
+
+```xml
+<repository>
+    <id>snapshots-repo</id>
+    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    <releases><enabled>false</enabled></releases>
+    <snapshots><enabled>true</enabled></snapshots>
+</repository>
+```
 
 ## Basic usage
 
@@ -123,3 +134,8 @@ User for unit testing. Licence: EPL 2.0
 
 ### org.slf4j:slf4j-simple
 User for unit testing. Licence: MIT
+
+## Version history
+
+### v1.0.0
+Initial implementation, heavily based on similar functionality in the Ride (https://github.com/perNyfelt/ride) project.
