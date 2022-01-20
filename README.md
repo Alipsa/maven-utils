@@ -89,3 +89,37 @@ The method is defined as `resolveArtifact(String groupId, String artifactId, Str
 
 
 For a more elaborate explanation see [the maven documentation](https://maven.apache.org/pom.html)
+
+## Logging
+Maven-utils uses slf4j for logging so a slf4j implementation needs to be present for logging to work. 
+
+## License and dependencies
+The code in this repository is licenced under the MIT license. However, maven-utils depends on a number of other libraries
+to be able to do its thing. Below is a list of them with their respective license.
+
+### org.slf4j:slf4j-api
+Used for logging. Licence: MIT
+
+### org.apache.maven.shared:maven-invoker
+Used to run maven. Licence: Apache 2.0
+
+### org.apache.maven.shared:maven-shared-utils
+Used to run maven and to parse the pom file. Licence: Apache 2.0
+
+### org.apache.maven:maven-core
+Used to run maven and to parse the pom file. Licence: Apache 2.0
+
+### org.eclipse.aether:aether-connector-basic
+Used to resolve dependencies. License: EPL 1.0
+
+### org.eclipse.aether:aether-transport-file
+Used to resolve dependencies. License: EPL 1.0
+
+### org.eclipse.aether:aether-transport-http
+Used to resolve dependencies. License: EPL 1.0
+
+### org.junit.jupiter:junit-jupiter
+User for unit testing. Licence: EPL 2.0
+
+### org.slf4j:slf4j-simple
+User for unit testing. Licence: MIT

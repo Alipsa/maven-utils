@@ -9,6 +9,12 @@ public class EnvUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(EnvUtils.class);
 
+  /**
+   * A reasonably bulletproof way to get the user's home directory on any OS.
+   * the .m2/settings.xml resides in the user's home dir so the primary purpose of this method
+   * is to enable MavenUtils to parse the settings.xml file.
+   * @return the users home directory.
+   */
   public static File getUserHome() {
     String userHome = System.getProperty("user.home");
     if (userHome == null) {
