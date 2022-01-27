@@ -5,17 +5,14 @@ Use it by adding the dependency to your maven pom:
 ```xml
 <dependency>
     <groupId>se.alipsa</groupId>
-    <artifactId>maven-utils</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-    <classifier>3.3.9</classifier>
-    <!-- or if you prefer the maven 3.8.4 version:
-    <classifier>3.8.4</classifier>
+    <artifactId>maven-3.8.4-utils</artifactId>
+    <!-- or if you prefer the maven 3.3.9 version:
+    <artifactId>maven-3.3.9-utils</artifactId>
     -->
+    <version>1.0.0</version>
+
 </dependency>
 ```
-
-The classifier is needed to denote the version of maven you want to use. At the moment
-two different versions are supported: 3.3.9 and 3.8.4.
 
 For SNAPSHOT builds you need to have snapshots enabled for the sonatype snapshots repo. Production releases are available 
 in maven central so no repository configuration is needed.
