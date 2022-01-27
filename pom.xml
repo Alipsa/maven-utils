@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>se.alipsa</groupId>
-    <artifactId>maven-utils</artifactId>
+    <artifactId>maven-3.3.9-utils</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
@@ -125,9 +125,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
                 <version>3.2.1</version>
-                <configuration>
-                    <classifier>${envClassifier}-sources</classifier>
-                </configuration>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -141,9 +138,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.3.1</version>
-                <configuration>
-                    <classifier>${envClassifier}-javadoc</classifier>
-                </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -156,9 +150,6 @@
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.2</version>
-                <configuration>
-                    <classifier>${envClassifier}</classifier>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -192,24 +183,6 @@
     </distributionManagement>
 
     <profiles>
-        <profile>
-            <id>mvn339</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <envClassifier>3.3.9</envClassifier>
-            </properties>
-        </profile>
-        <profile>
-            <id>mvn384</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <properties>
-                <envClassifier>3.8.4</envClassifier>
-            </properties>
-        </profile>
         <profile>
             <id>release</id>
             <build>
