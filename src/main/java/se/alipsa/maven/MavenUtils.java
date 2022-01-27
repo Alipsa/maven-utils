@@ -296,10 +296,7 @@ public class MavenUtils {
   }
 
   private static Settings getSettings() throws SettingsBuildingException {
-    DefaultSettingsReader settingsReader = new DefaultSettingsReader();
-    DefaultSettingsWriter settingsWriter = new DefaultSettingsWriter();
-    DefaultSettingsValidator settingsValidator = new DefaultSettingsValidator();
-    DefaultSettingsBuilder defaultSettingsBuilder = new DefaultSettingsBuilder(settingsReader, settingsWriter, settingsValidator);
+    DefaultSettingsBuilder defaultSettingsBuilder = new DefaultSettingsBuilder();
     DefaultSettingsBuildingRequest request = new DefaultSettingsBuildingRequest();
     File userSettingsFile = new File(getUserHome(), ".m2/settings.xml");
     if (userSettingsFile.exists()) {

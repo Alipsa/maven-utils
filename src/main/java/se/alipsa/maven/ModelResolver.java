@@ -1,6 +1,5 @@
 package se.alipsa.maven;
 
-import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Parent;
 import org.apache.maven.model.Repository;
 import org.apache.maven.model.building.FileModelSource;
@@ -90,11 +89,6 @@ public class ModelResolver implements org.apache.maven.model.resolution.ModelRes
       throw new UnresolvableModelException( e.getMessage(), parent.getGroupId(), parent.getArtifactId(),
           parent.getVersion(), e );
     }
-  }
-
-  @Override
-  public ModelSource resolveModel(Dependency dependency) throws UnresolvableModelException {
-    return resolveModel(dependency.getGroupId(), dependency.getArtifactId(), dependency.getVersion());
   }
 
   @Override
