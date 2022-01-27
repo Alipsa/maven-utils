@@ -7,8 +7,16 @@ Use it by adding the dependency to your maven pom:
     <groupId>se.alipsa</groupId>
     <artifactId>maven-utils</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+    <classifier>3.3.9</classifier>
+    <!-- or if you prefer the maven 3.8.4 version:
+    <classifier>3.8.4</classifier>
+    -->
 </dependency>
 ```
+
+The classifier is needed to denote the version of maven you want to use. At the moment
+two different versions are supported: 3.3.9 and 3.8.4.
+
 For SNAPSHOT builds you need to have snapshots enabled for the sonatype snapshots repo. Production releases are available 
 in maven central so no repository configuration is needed.
 
@@ -43,9 +51,16 @@ The arguments to `runMaven(final File pomFile, String[] mvnArgs,
 
 Note that maven need to be installed locally for the maven invoker which is used to run maven to work. MavenUtils will first 
 look for the MAVEN_HOME system property, then for the MAVEN_HOME environment variable and if still not found will try to locate
-the mvn command in the PATH. 
-<hr />
+the mvn command in the PATH.
 
+Get the local repository
+```groovy
+import se.alipsa.maven.MavenUtils;
+import org.eclipse.aether.repository.LocalRepository;
+
+LocalRepository localRepository = MavenUtils.getLocalRepository();
+```
+<hr />
 For the methods below, an instance of MavenUtils must be created. This allows you to pass in
 a list of RemoteRepositories used for the resolution. If you use the default constructor (as in the examples below)
 you get the Maven Central and BeDatadriven repositories.
