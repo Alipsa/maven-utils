@@ -121,8 +121,7 @@ public class ModelResolver implements org.apache.maven.model.resolution.ModelRes
     return new ModelResolver(remoteRepositories, repositorySystemSession, repositorySystem);
   }
 
-  private void removeMatchingRepository( Iterable<RemoteRepository> repositories, final String id )
-  {
+  private void removeMatchingRepository( Iterable<RemoteRepository> repositories, final String id ) {
     Iterator<RemoteRepository> iterator = repositories.iterator();
     while ( iterator.hasNext() )
     {

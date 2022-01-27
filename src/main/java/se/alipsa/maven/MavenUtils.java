@@ -283,7 +283,7 @@ public class MavenUtils {
     return repositorySystemSession;
   }
 
-  private static LocalRepository getLocalRepository() throws SettingsBuildingException {
+  public static LocalRepository getLocalRepository() throws SettingsBuildingException {
     Settings settings = getSettings();
     String localRepoPath = settings.getLocalRepository();
 
