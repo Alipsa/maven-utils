@@ -166,6 +166,7 @@ User for unit testing. Licence: MIT
 - add dependency on later version of httpclient since the one that comes with aether-transport-http 
 has security issues.
 - improve download artifact test
+- add dependency on later version commons-io since the one that comes with maven-shared-utils has security issues
 
 ### 1.0.1, Jan 28, 2022
 - make locateMavenHome public.
