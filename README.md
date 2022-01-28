@@ -162,6 +162,11 @@ User for unit testing. Licence: MIT
 
 ## Version history
 
+### 1.0.2
+- add dependency on later version of httpclient since the one that comes with aether-transport-http 
+has security issues.
+- improve download artifact test
+
 ### 1.0.1, Jan 28, 2022
 - make locateMavenHome public.
 

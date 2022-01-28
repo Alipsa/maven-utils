@@ -20,15 +20,31 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class MavenUtilsTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(MavenUtilsTest.class);
+
   @Test
   public void testDownloadArtifact() throws SettingsBuildingException, ArtifactResolutionException {
     MavenUtils mavenUtils = new MavenUtils();
+    File localRepo = MavenUtils.getLocalRepository().getBasedir();
+    assertNotNull(localRepo);
+    File artifactDir = new File(localRepo, "org/slf4j/slf4j-api/1.7.32");
+    if (artifactDir.exists()) {
+      LOG.info("Deleting files in {} to ensure remote download works", artifactDir.getAbsolutePath());
+      for (File file : Objects.requireNonNull(artifactDir.listFiles())) {
+        if ("slf4j-api-1.7.32.jar".equals(file.getName()) || "slf4j-api-1.7.32.jar.sha1".equals(file.getName())) {
+          LOG.info("Deleting {}", file.getName());
+          assertTrue(file.delete(), "Failed to delete " + file.getAbsolutePath());
+        }
+      }
+    } else {
+      LOG.info("{} does not exist: no problem, we are going to fetch it!", artifactDir.getAbsolutePath());
+    }
     File file = mavenUtils.resolveArtifact("org.slf4j", "slf4j-api", null, "jar", "1.7.32");
     assertTrue(file.exists(), "File does not exist");
     assertEquals("slf4j-api-1.7.32.jar", file.getName(), "File name is wrong");
