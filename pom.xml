@@ -6,7 +6,7 @@
 
     <groupId>se.alipsa</groupId>
     <artifactId>maven-3.3.9-utils</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>maven-utils</name>
@@ -77,6 +77,12 @@
             <groupId>org.eclipse.aether</groupId>
             <artifactId>aether-transport-http</artifactId>
             <version>1.1.0</version>
+        </dependency>
+        <dependency>
+            <!-- 4.3 included in aether-transport-http has security issues -->
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.13</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
