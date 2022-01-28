@@ -50,6 +50,14 @@ Note that maven need to be installed locally for the maven invoker which is used
 look for the MAVEN_HOME system property, then for the MAVEN_HOME environment variable and if still not found will try to locate
 the mvn command in the PATH.
 
+The static method locateMavenHome is used to find maven home.
+```groovy
+import se.alipsa.maven.MavenUtils;
+
+String mavenHome = MavenUtils.locateMavenHome();
+```
+
+
 Get the local repository
 ```groovy
 import se.alipsa.maven.MavenUtils;
@@ -57,6 +65,7 @@ import org.eclipse.aether.repository.LocalRepository;
 
 LocalRepository localRepository = MavenUtils.getLocalRepository();
 ```
+
 <hr />
 For the methods below, an instance of MavenUtils must be created. This allows you to pass in
 a list of RemoteRepositories used for the resolution. If you use the default constructor (as in the examples below)
@@ -153,5 +162,8 @@ User for unit testing. Licence: MIT
 
 ## Version history
 
-### v1.0.0
-Initial implementation, heavily based on similar functionality in the [Ride](https://github.com/perNyfelt/ride) project.
+### 1.0.1
+- make locateMavenHome public.
+
+### 1.0.0, Jan 27, 2022
+- Initial implementation, heavily based on similar functionality in the [Ride](https://github.com/perNyfelt/ride) project.
