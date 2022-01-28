@@ -162,7 +162,7 @@ User for unit testing. Licence: MIT
 
 ## Version history
 
-### 1.0.1
+### 1.0.1, Jan 28, 2022
 - make locateMavenHome public.
 
 ### 1.0.0, Jan 27, 2022
