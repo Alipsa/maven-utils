@@ -9,7 +9,7 @@ Use it by adding the dependency to your maven pom:
     <!-- or if you prefer the maven 3.3.9 version:
     <artifactId>maven-3.3.9-utils</artifactId>
     -->
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
 </dependency>
 ```
