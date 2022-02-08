@@ -162,6 +162,9 @@ User for unit testing. Licence: MIT
 
 ## Version history
 
+### 1.0.3
+- Add support for system properties in (-Dkey=value) the maven arguments
+
 ### 1.0.2
 - add dependency on later version of httpclient since the one that comes with aether-transport-http 
 has security issues.
