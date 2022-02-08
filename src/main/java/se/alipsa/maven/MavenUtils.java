@@ -111,12 +111,18 @@ public class MavenUtils {
   public static InvocationResult runMaven(final File pomFile, String[] mvnArgs,
                                           @Nullable InvocationOutputHandler consoleOutputHandler,
                                           @Nullable InvocationOutputHandler warningOutputHandler) throws MavenInvocationException {
-    InvocationRequest request = new DefaultInvocationRequest();
-    request.setBatchMode(true);
-    request.setPomFile( pomFile );
-    request.setGoals(Arrays.asList(mvnArgs) );
     File dir = pomFile.getParentFile();
-    request.setBaseDirectory(dir);
+    Properties sysProps = EnvUtils.parseArguments(mvnArgs);
+    InvocationRequest request = new DefaultInvocationRequest()
+        .setBatchMode(true)
+        .setPomFile( pomFile )
+        .setGoals(Arrays.asList(mvnArgs))
+        .setBaseDirectory(dir);
+
+    if (!sysProps.isEmpty()) {
+      request.getProperties().putAll(sysProps);
+    }
+
     LOG.info("Running maven from dir {} with args {}", dir, String.join(" ", mvnArgs));
     Invoker invoker = new DefaultInvoker();
     String mavenHome = locateMavenHome();

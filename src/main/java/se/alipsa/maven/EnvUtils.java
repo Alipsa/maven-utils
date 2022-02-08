@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.Properties;
 
 public class EnvUtils {
 
@@ -37,5 +38,18 @@ public class EnvUtils {
       throw new NotFoundException("User home dir " + homeDir + " does not exist, something is not right");
     }
     return homeDir;
+  }
+
+  public static Properties parseArguments(String[] args) {
+    Properties sysProps = new Properties();
+    for (String arg : args) {
+      if (arg.startsWith("-D") && arg.contains("=")) {
+        String[] prop = arg.split("=");
+        String key = prop[0].substring(2);
+        String value = prop[1];
+        sysProps.setProperty(key, value);
+      }
+    }
+    return sysProps;
   }
 }

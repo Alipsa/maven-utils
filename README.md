@@ -167,6 +167,7 @@ User for unit testing. Licence: MIT
 has security issues.
 - improve download artifact test
 - add dependency on later version commons-io since the one that comes with maven-shared-utils has security issues
+- Add support for system properties in (-Dkey=value) the maven arguments
 
 ### 1.0.1, Jan 28, 2022
 - make locateMavenHome public.
