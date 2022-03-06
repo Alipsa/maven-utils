@@ -9,7 +9,7 @@ Use it by adding the dependency to your maven pom:
     <!-- or if you prefer the maven 3.3.9 version:
     <artifactId>maven-3.3.9-utils</artifactId>
     -->
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 
 </dependency>
 ```
@@ -162,7 +162,7 @@ User for unit testing. Licence: MIT
 
 ## Version history
 
-### 1.0.2
+### 1.0.2, Mar 6, 2022
 - add dependency on later version of httpclient since the one that comes with aether-transport-http 
 has security issues.
 - improve download artifact test
