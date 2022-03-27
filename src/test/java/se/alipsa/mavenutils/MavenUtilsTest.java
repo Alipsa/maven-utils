@@ -1,4 +1,4 @@
-package se.alipsa.maven;
+package se.alipsa.mavenutils;
 
 import static org.junit.jupiter.api.Assertions.*;
 

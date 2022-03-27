@@ -1,4 +1,4 @@
-package se.alipsa.maven;
+package se.alipsa.mavenutils;
 
 import org.eclipse.aether.AbstractRepositoryListener;
 import org.eclipse.aether.RepositoryEvent;
