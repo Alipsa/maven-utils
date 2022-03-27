@@ -1,4 +1,4 @@
-package se.alipsa.maven;
+package se.alipsa.mavenutils;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,6 +1,6 @@
-package se.alipsa.maven;
+package se.alipsa.mavenutils;
 
-import static se.alipsa.maven.EnvUtils.getUserHome;
+import static se.alipsa.mavenutils.EnvUtils.getUserHome;
 
 import org.eclipse.aether.resolution.*;
 import org.slf4j.Logger;

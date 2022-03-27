@@ -1,4 +1,4 @@
-package se.alipsa.maven;
+package se.alipsa.mavenutils;
 
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Parent;

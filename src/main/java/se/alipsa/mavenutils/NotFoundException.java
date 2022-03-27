@@ -1,4 +1,4 @@
-package se.alipsa.maven;
+package se.alipsa.mavenutils;
 
 public class NotFoundException extends RuntimeException {
   public NotFoundException() {
