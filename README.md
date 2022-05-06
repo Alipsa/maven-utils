@@ -123,8 +123,9 @@ The method is defined as `resolveArtifact(String groupId, String artifactId, Str
 - extension could be pom, jar, zip etc.
 - version is the same as the <version> tag in the pom.xml
 
-
 For a more elaborate explanation see [the maven documentation](https://maven.apache.org/pom.html)
+
+The Javadocs are available [here ![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.8.4-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.8.4-utils)
 
 ## Logging
 Maven-utils uses slf4j for logging so a slf4j implementation needs to be present for logging to work. 
