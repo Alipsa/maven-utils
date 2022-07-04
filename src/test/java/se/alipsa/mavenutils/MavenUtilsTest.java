@@ -161,4 +161,12 @@ public class MavenUtilsTest {
     Class<?> clazz = cl.loadClass(className);
     LOG.info("Class resolved to {}", clazz);
   }
+
+  @Test
+  public void testPomParsingWithPomArtifact() throws URISyntaxException, SettingsBuildingException, ModelBuildingException, DependenciesResolveException {
+    File pomFile = Paths.get(getClass().getResource("/pom/transientPom.xml").toURI()).toFile();
+    MavenUtils mavenUtils = new MavenUtils();
+    Set<File> dependencies = mavenUtils.resolveDependencies(pomFile);
+    assertNotNull(dependencies, "Failed to resolve dependencies");
+  }
 }
