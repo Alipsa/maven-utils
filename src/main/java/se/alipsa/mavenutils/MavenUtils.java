@@ -198,7 +198,8 @@ public class MavenUtils {
       Artifact artifact = new DefaultArtifact(d.getGroupId(), d.getArtifactId(), d.getType(), d.getVersion());
 
       ///// Resolve main + transient
-      LOG.debug("resolving {}:{}:{}...", artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion() );
+      LOG.info("resolving {}:{}:{}:{}...", artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), d.getType() );
+      // Maybe use d.getScope()?
       CollectRequest collectRequest = new CollectRequest(new Dependency(artifact, JavaScopes.COMPILE), repositories);
       DependencyFilter filter = DependencyFilterUtils.classpathFilter(JavaScopes.COMPILE);
       DependencyRequest request = new DependencyRequest(collectRequest, filter);
