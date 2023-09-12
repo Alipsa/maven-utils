@@ -394,4 +394,7 @@ public class MavenUtils {
     return classpathElements;
   }
 
+  public List<RemoteRepository> getRemoteRepositories() {
+    return remoteRepositories;
+  }
 }
