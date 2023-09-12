@@ -267,7 +267,7 @@ public class MavenUtils {
     return "";
   }
 
-  private static RepositorySystem getRepositorySystem() {
+  static RepositorySystem getRepositorySystem() {
     DefaultServiceLocator serviceLocator = MavenRepositorySystemUtils.newServiceLocator();
     serviceLocator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
     serviceLocator.addService(TransporterFactory.class, FileTransporterFactory.class);
@@ -284,7 +284,7 @@ public class MavenUtils {
     return serviceLocator.getService(RepositorySystem.class);
   }
 
-  private static DefaultRepositorySystemSession getRepositorySystemSession(RepositorySystem system) throws SettingsBuildingException {
+  static DefaultRepositorySystemSession getRepositorySystemSession(RepositorySystem system) throws SettingsBuildingException {
     DefaultRepositorySystemSession repositorySystemSession = MavenRepositorySystemUtils.newSession();
     LocalRepository localRepository = getLocalRepository();
     repositorySystemSession.setLocalRepositoryManager(
