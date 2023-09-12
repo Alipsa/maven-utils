@@ -184,38 +184,45 @@ public class MavenUtils {
     return null;
   }
 
-  public Set<File> resolveDependencies(File pomFile) throws SettingsBuildingException, ModelBuildingException,
+  public Set<File> resolveDependencies(File pomFile, boolean... includeTestScope) throws SettingsBuildingException, ModelBuildingException,
       DependenciesResolveException {
     RepositorySystem repositorySystem = getRepositorySystem();
     RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem);
-
+    boolean testScope = includeTestScope.length > 0 && includeTestScope[0];
     Model model = parsePom(pomFile);
     List<RemoteRepository> repositories = getRepositories(model);
     Set<File> dependencies = new HashSet<>();
     LOG.trace("Maven model resolved: {}, parsing its dependencies...", model);
+    List<String> includeScopes = new ArrayList<>();
+    includeScopes.add(JavaScopes.COMPILE);
+    includeScopes.add(JavaScopes.RUNTIME);
+    if (testScope) {
+      includeScopes.add(JavaScopes.TEST);
+    }
     for (org.apache.maven.model.Dependency d : model.getDependencies()) {
       LOG.trace("processing dependency: {}", d);
       Artifact artifact = new DefaultArtifact(d.getGroupId(), d.getArtifactId(), d.getType(), d.getVersion());
 
-      ///// Resolve main + transient
-      LOG.info("resolving {}:{}:{}:{}...", artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), d.getType() );
-      // Maybe use d.getScope()?
-      CollectRequest collectRequest = new CollectRequest(new Dependency(artifact, JavaScopes.COMPILE), repositories);
-      DependencyFilter filter = DependencyFilterUtils.classpathFilter(JavaScopes.COMPILE);
-      DependencyRequest request = new DependencyRequest(collectRequest, filter);
+      if (includeScopes.contains(d.getScope())) {
+        ///// Resolve main + transient
+        LOG.info("resolving {}:{}:{}:{}...", artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), d.getType() );
+        CollectRequest collectRequest = new CollectRequest(new Dependency(artifact, JavaScopes.RUNTIME), repositories);
+        DependencyFilter filter = DependencyFilterUtils.classpathFilter(includeScopes);
+        DependencyRequest request = new DependencyRequest(collectRequest, filter);
 
-      DependencyResult result;
-      try {
-        result = repositorySystem.resolveDependencies(repositorySystemSession, request);
-      } catch (DependencyResolutionException | RuntimeException e) {
-        LOG.warn("Error resolving dependent artifact: {}:{}:{}", d.getGroupId(), d.getArtifactId(), d.getVersion(), e);
-        throw new DependenciesResolveException("Error resolving dependent artifact: "+ d.getGroupId() + ":" + d.getArtifactId() + ":" + d.getVersion(), e);
-      }
+        DependencyResult result;
+        try {
+          result = repositorySystem.resolveDependencies(repositorySystemSession, request);
+        } catch (DependencyResolutionException | RuntimeException e) {
+          LOG.warn("Error resolving dependent artifact: {}:{}:{}", d.getGroupId(), d.getArtifactId(), d.getVersion(), e);
+          throw new DependenciesResolveException("Error resolving dependent artifact: " + d.getGroupId() + ":" + d.getArtifactId() + ":" + d.getVersion(), e);
+        }
 
-      for (ArtifactResult artifactResult : result.getArtifactResults()) {
-        Artifact art = artifactResult.getArtifact();
-        LOG.debug("artifact {} resolved to {}", art, art.getFile());
-        dependencies.add(art.getFile());
+        for (ArtifactResult artifactResult : result.getArtifactResults()) {
+          Artifact art = artifactResult.getArtifact();
+          LOG.debug("artifact {} resolved to {}", art, art.getFile());
+          dependencies.add(art.getFile());
+        }
       }
     }
     return dependencies;
