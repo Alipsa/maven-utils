@@ -16,6 +16,7 @@
     </properties>
     <dependencies>
         <dependency>
+            <!-- todo: this is not a valid example ofa pom dependency-->
             <groupId>org.apache.ivy</groupId>
             <artifactId>ivy</artifactId>
             <version>2.5.0</version>
