@@ -1,4 +1,9 @@
 # maven-utils
+
+maven-3.9.4-utils:
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.4-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.4-utils)
+[![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.9.4-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.9.4-utils)
+
 maven-3.8.4-utils: 
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.8.4-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.8.4-utils)
 [![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.8.4-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.8.4-utils)
@@ -13,11 +18,11 @@ Use it by adding the dependency to your maven pom:
 ```xml
 <dependency>
     <groupId>se.alipsa</groupId>
-    <artifactId>maven-3.8.4-utils</artifactId>
+    <artifactId>maven-3.9.4-utils</artifactId>
     <!-- or if you prefer the maven 3.3.9 version:
     <artifactId>maven-3.3.9-utils</artifactId>
     -->
-    <version>1.0.2</version>
+    <version>1.0.3</version>
 
 </dependency>
 ```
