@@ -22,7 +22,7 @@ Use it by adding the dependency to your maven pom:
     <!-- or if you prefer the maven 3.3.9 version:
     <artifactId>maven-3.3.9-utils</artifactId>
     -->
-    <version>1.0.3</version>
+    <version>1.1.0</version>
 
 </dependency>
 ```
@@ -82,7 +82,7 @@ LocalRepository localRepository = MavenUtils.getLocalRepository();
 <hr />
 For the methods below, an instance of MavenUtils must be created. This allows you to pass in
 a list of RemoteRepositories used for the resolution. If you use the default constructor (as in the examples below)
-you get the Maven Central and BeDatadriven repositories.
+you get the Maven Central repository.
 
 ### Parse a pom file into a Model
 
@@ -136,6 +136,9 @@ The method is defined as `resolveArtifact(String groupId, String artifactId, Str
 - extension could be pom, jar, zip etc.
 - version is the same as the <version> tag in the pom.xml
 
+There is also a simplified version of resolveArtifact requiring only groupId, artifactId and version where classifier is "null" and extension is "jar".
+
+
 For a more elaborate explanation see [the maven documentation](https://maven.apache.org/pom.html)
 
 ## Logging
@@ -171,21 +174,3 @@ User for unit testing. Licence: EPL 2.0
 
 ### org.slf4j:slf4j-simple
 User for unit testing. Licence: MIT
-
-## Version history
-
-### 1.0.3
-
-### 1.0.2, Mar 6, 2022
-- add dependency on later version of httpclient since the one that comes with aether-transport-http 
-has security issues.
-- improve download artifact test
-- add dependency on later version commons-io since the one that comes with maven-shared-utils has security issues
-- Add support for system properties in (-Dkey=value) the maven arguments
-- upgrade slf4j dependency version
-
-### 1.0.1, Jan 28, 2022
-- make locateMavenHome public.
-
-### 1.0.0, Jan 27, 2022
-- Initial implementation, heavily based on similar functionality in the [Ride](https://github.com/perNyfelt/ride) project.

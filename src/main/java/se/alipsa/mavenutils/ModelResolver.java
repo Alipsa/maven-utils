@@ -22,6 +22,10 @@ import org.eclipse.aether.resolution.*;
 import java.io.File;
 import java.util.*;
 
+/**
+ * This class implements the ModelResolver interface to resolve Maven models
+ * from remote repositories. It uses the Aether library to perform the resolution.
+ */
 public class ModelResolver implements org.apache.maven.model.resolution.ModelResolver {
 
   List<RemoteRepository> remoteRepositories;

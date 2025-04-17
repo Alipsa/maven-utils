@@ -60,13 +60,13 @@ public class MavenUtils {
   private static final RemoteRepository CENTRAL_MAVEN_REPOSITORY = getCentralMavenRepository();
   private static final RemoteRepository BE_DATA_DRIVEN_MAVEN_REPOSITORY = getBeDataDrivenMavenRepository();
 
-  private final List<RemoteRepository> remoteRepositories;
+  private final List<RemoteRepository> remoteRepositories = new ArrayList<>();
 
   /**
-   * Default constructor, will use Maven Central and BeDataDriven as remote repositories
+   * Default constructor, will use Maven Central remote repository
    */
   public MavenUtils() {
-    remoteRepositories = getDefaultRemoteRepositories();
+    remoteRepositories.addAll(getDefaultRemoteRepositories());
   }
 
   /**
@@ -82,11 +82,25 @@ public class MavenUtils {
    * @param remoteRepositories a list of RemoteRepositories to use for Maven pom operations.
    */
   public MavenUtils(List<RemoteRepository> remoteRepositories) {
-    this.remoteRepositories = remoteRepositories;
+    this.remoteRepositories.addAll(remoteRepositories);
+  }
+
+  public MavenUtils addRemoteRepository(String id, String url) {
+    return addRemoteRepository(id, "default", url);
+  }
+
+  public MavenUtils addRemoteRepository(String id, String type, String url) {
+    return addRemoteRepository(new RemoteRepository.Builder(id, type, url)
+        .build());
+  }
+
+  public MavenUtils addRemoteRepository(RemoteRepository remoteRepository) {
+    remoteRepositories.add(remoteRepository);
+    return this;
   }
 
   public static List<RemoteRepository> getDefaultRemoteRepositories() {
-    return Arrays.asList(CENTRAL_MAVEN_REPOSITORY, BE_DATA_DRIVEN_MAVEN_REPOSITORY);
+    return Arrays.asList(CENTRAL_MAVEN_REPOSITORY);
   }
 
   public static RemoteRepository getCentralMavenRepository() {
@@ -151,6 +165,9 @@ public class MavenUtils {
     return getMavenClassLoader(parsePom(pomFile), resolveDependencies(pomFile), possibleParent);
   }
 
+  public File resolveArtifact(String groupId, String artifactId, String version) throws SettingsBuildingException, ArtifactResolutionException {
+    return resolveArtifact(groupId, artifactId, null, "jar", version);
+  }
   /**
    *
    * @param groupId is the same as the &lt;groupId&gt; tag in the pom.xml
@@ -258,7 +275,7 @@ public class MavenUtils {
 
   private static String locateMaven() {
     String path = System.getenv("PATH");
-    String[] pathElements = path.split(System.getProperty("path.separator"));
+    String[] pathElements = path.split(File.pathSeparator);
     for (String elem : pathElements) {
       File dir = new File(elem);
       if (dir.exists()) {

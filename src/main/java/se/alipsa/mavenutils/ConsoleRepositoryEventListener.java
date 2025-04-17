@@ -5,6 +5,12 @@ import org.eclipse.aether.RepositoryEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * ConsoleRepositoryEventListener is a custom repository event listener that
+ * logs various repository events to the console using SLF4J.
+ * It extends AbstractRepositoryListener and overrides methods to log
+ * artifact installation, resolution, downloading, and other events.
+ */
 public class ConsoleRepositoryEventListener extends AbstractRepositoryListener {
 
    private static final Logger LOG = LoggerFactory.getLogger(ConsoleRepositoryEventListener.class);
