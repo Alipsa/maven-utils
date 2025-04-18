@@ -85,20 +85,6 @@ public class MavenUtils {
     this.remoteRepositories.addAll(remoteRepositories);
   }
 
-  public MavenUtils addRemoteRepository(String id, String url) {
-    return addRemoteRepository(id, "default", url);
-  }
-
-  public MavenUtils addRemoteRepository(String id, String type, String url) {
-    return addRemoteRepository(new RemoteRepository.Builder(id, type, url)
-        .build());
-  }
-
-  public MavenUtils addRemoteRepository(RemoteRepository remoteRepository) {
-    remoteRepositories.add(remoteRepository);
-    return this;
-  }
-
   public static List<RemoteRepository> getDefaultRemoteRepositories() {
     return Arrays.asList(CENTRAL_MAVEN_REPOSITORY);
   }
@@ -409,6 +395,20 @@ public class MavenUtils {
     classpathElements.add(project.getBuild().getOutputDirectory());
     classpathElements.add(project.getBuild().getTestOutputDirectory());
     return classpathElements;
+  }
+
+  public MavenUtils addRemoteRepository(String id, String url) {
+    return addRemoteRepository(id, "default", url);
+  }
+
+  public MavenUtils addRemoteRepository(String id, String type, String url) {
+    return addRemoteRepository(new RemoteRepository.Builder(id, type, url)
+        .build());
+  }
+
+  public MavenUtils addRemoteRepository(RemoteRepository remoteRepository) {
+    remoteRepositories.add(remoteRepository);
+    return this;
   }
 
   public List<RemoteRepository> getRemoteRepositories() {
