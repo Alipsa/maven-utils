@@ -173,7 +173,7 @@ public class MavenUtilsTest {
         "oss.sonatype.org-snapshot",
         "https://oss.sonatype.org/content/repositories/snapshots"
     );
-    File af = mavenUtils.resolveArtifact("se.alipsa", "gade-runner", "1.1.0-SNAPSHOT");
+    File af = mavenUtils.resolveArtifact("se.alipsa", "gade-runner", "1.0.0-SNAPSHOT");
     assertNotNull(af, "Artifact is null");
   }
 
