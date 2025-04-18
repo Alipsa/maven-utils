@@ -6,6 +6,11 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.Properties;
 
+/**
+ * Utility class for environment-related operations.
+ * This class provides methods to retrieve the user's home directory
+ * and parse command-line arguments into system properties.
+ */
 public class EnvUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(EnvUtils.class);

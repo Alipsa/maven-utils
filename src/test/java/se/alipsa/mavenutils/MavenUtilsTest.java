@@ -166,12 +166,25 @@ public class MavenUtilsTest {
     LOG.info("Class resolved to {}", clazz);
   }
 
-  /*@Test
+  @Test
+  public void testFetchArtifactFromSnapshot() throws Exception {
+    MavenUtils mavenUtils = new MavenUtils();
+    mavenUtils.addRemoteRepository(
+        "oss.sonatype.org-snapshot",
+        "https://oss.sonatype.org/content/repositories/snapshots"
+    );
+    File af = mavenUtils.resolveArtifact("se.alipsa", "gade-runner", "1.0.0-SNAPSHOT");
+    assertNotNull(af, "Artifact is null");
+  }
+
+  /*
+  @Test
   public void testPomParsingWithPomArtifact() throws URISyntaxException, SettingsBuildingException, ModelBuildingException, DependenciesResolveException {
     File pomFile = Paths.get(getClass().getResource("/pom/transientPom.xml").toURI()).toFile();
     MavenUtils mavenUtils = new MavenUtils();
     Set<File> dependencies = mavenUtils.resolveDependencies(pomFile);
     assertNotNull(dependencies, "Failed to resolve dependencies");
   }
+
    */
 }

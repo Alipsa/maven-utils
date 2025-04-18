@@ -9,6 +9,11 @@ import org.apache.maven.model.building.*;
 import java.io.File;
 import java.util.List;
 
+/**
+ * This class is a custom implementation of the ModelBuilder interface that modifies the
+ * behavior of the default model builder to include parent POMs as dependencies in the
+ * effective model.
+ */
 public class ParentPomsAsDependencyModelBuilder implements ModelBuilder {
 
    private final DefaultModelBuilder delegate;
