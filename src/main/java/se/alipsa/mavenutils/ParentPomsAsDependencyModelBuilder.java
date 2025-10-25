@@ -18,6 +18,9 @@ public class ParentPomsAsDependencyModelBuilder implements ModelBuilder {
 
    private final DefaultModelBuilder delegate;
 
+   /**
+    * Constructs a ParentPomsAsDependencyModelBuilder that delegates to the default model builder.
+    */
    public ParentPomsAsDependencyModelBuilder() {
       delegate = new DefaultModelBuilderFactory().newInstance();
    }

@@ -85,21 +85,34 @@ public class MavenUtils {
     this.remoteRepositories.addAll(remoteRepositories);
   }
 
+  /**
+   * Get the default remote repositories used by MavenUtils
+   * @return list of RemoteRepository
+   */
   public static List<RemoteRepository> getDefaultRemoteRepositories() {
     return Arrays.asList(CENTRAL_MAVEN_REPOSITORY);
   }
 
+  /**
+   * Get the Maven Central remote repository
+   * @return RemoteRepository for Maven Central
+   */
   public static RemoteRepository getCentralMavenRepository() {
     return new RemoteRepository.Builder("central", "default", "https://repo1.maven.org/maven2/")
         .build();
   }
 
+  /**
+   * Get the BeDataDriven Maven remote repository
+   * @return RemoteRepository for BeDataDriven Maven repo
+   */
   public static RemoteRepository getBeDataDrivenMavenRepository() {
     return new RemoteRepository.Builder("bedatadriven", "default", "https://nexus.bedatadriven.com/content/groups/public/")
         .build();
   }
 
   /**
+   * Run maven with the given arguments (targets) on the given pom file.
    *
    * @param pomFile the pom.xml file to parse
    * @param mvnArgs the arguments (targets) to send to maven (e.g. clean install)
@@ -139,6 +152,12 @@ public class MavenUtils {
     return invoker.execute( request );
   }
 
+  /**
+   * Locates the MAVEN_HOME either from system property or environment variable.
+   * If not found it will try to locate it from the PATH environment variable.
+   *
+   * @return the MAVEN_HOME path
+   */
   public static String locateMavenHome() {
     String mavenHome = System.getProperty("MAVEN_HOME", System.getenv("MAVEN_HOME"));
     if (mavenHome == null) {
@@ -147,14 +166,33 @@ public class MavenUtils {
     return mavenHome;
   }
 
+  /**
+   * Get a ClassLoader that includes the dependencies defined in the given pom file.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param possibleParent an optional parent ClassLoader, can be null
+   * @return a ClassLoader that includes the dependencies defined in the pom file
+   * @throws Exception if there was some issue parsing the pom file or resolving dependencies
+   */
   public ClassLoader getMavenDependenciesClassloader(File pomFile, @Nullable ClassLoader possibleParent) throws Exception {
     return getMavenClassLoader(parsePom(pomFile), resolveDependencies(pomFile), possibleParent);
   }
 
+  /**
+   * Resolve an artifact from the remote repositories.
+   *
+   * @param groupId is the same as the &lt;groupId&gt; tag in the pom.xml
+   * @param artifactId is the same as the &lt;artifactId&gt; tag in the pom.xml
+   * @param version is the same as the &lt;version&gt; tag in the pom.xml
+   * @return a file pointing to the resolved artifact.
+   * @throws SettingsBuildingException if there was some issue with building the maven settings context
+   * @throws ArtifactResolutionException if the artifact does not exist (e.g arguments are wrong) or some transport issue
+   */
   public File resolveArtifact(String groupId, String artifactId, String version) throws SettingsBuildingException, ArtifactResolutionException {
     return resolveArtifact(groupId, artifactId, null, "jar", version);
   }
   /**
+   * Resolve an artifact from the remote repositories.
    *
    * @param groupId is the same as the &lt;groupId&gt; tag in the pom.xml
    * @param artifactId is the same as the &lt;artifactId&gt; tag in the pom.xml
@@ -187,6 +225,16 @@ public class MavenUtils {
     return null;
   }
 
+  /**
+   * Resolve the dependencies for the given pom file.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param includeTestScope if true test scope dependencies will be included
+   * @return a Set of Files representing the resolved dependencies
+   * @throws SettingsBuildingException if there was some issue with building the maven settings context
+   * @throws ModelBuildingException if there was some issue with the pom file
+   * @throws DependenciesResolveException if there was some issue resolving dependencies
+   */
   public Set<File> resolveDependencies(File pomFile, boolean... includeTestScope) throws SettingsBuildingException, ModelBuildingException,
       DependenciesResolveException {
     RepositorySystem repositorySystem = getRepositorySystem();
@@ -232,6 +280,7 @@ public class MavenUtils {
   }
 
   /**
+   * Resolve the dependencies for the given pom file.
    *
    * @param pomFile the pom.xml file to parse
    * @return a Model (i.e. the Maven object representation of the pom file)
@@ -305,6 +354,11 @@ public class MavenUtils {
     return repositorySystemSession;
   }
 
+  /**
+   * Get the local repository as defined in the user's settings.xml or default to ~/.m2/repository
+   * @return LocalRepository instance pointing to the local maven repository
+   * @throws SettingsBuildingException if there was some issue with building the maven settings context
+   */
   public static LocalRepository getLocalRepository() throws SettingsBuildingException {
     Settings settings = getSettings();
     String localRepoPath = settings.getLocalRepository();
@@ -397,20 +451,46 @@ public class MavenUtils {
     return classpathElements;
   }
 
+  /**
+   * Add a remote repository to this MavenUtils instance.
+   *
+   * @param id the id of the remote repository
+   * @param url the url of the remote repository
+   * @return this MavenUtils instance
+   */
   public MavenUtils addRemoteRepository(String id, String url) {
     return addRemoteRepository(id, "default", url);
   }
 
+  /**
+   * Add a remote repository to this MavenUtils instance.
+   *
+   * @param id the id of the remote repository
+   * @param type the type of the remote repository
+   * @param url the url of the remote repository
+   * @return this MavenUtils instance
+   */
   public MavenUtils addRemoteRepository(String id, String type, String url) {
     return addRemoteRepository(new RemoteRepository.Builder(id, type, url)
         .build());
   }
 
+  /**
+   * Add a remote repository to this MavenUtils instance.
+   *
+   * @param remoteRepository the RemoteRepository to add
+   * @return this MavenUtils instance
+   */
   public MavenUtils addRemoteRepository(RemoteRepository remoteRepository) {
     remoteRepositories.add(remoteRepository);
     return this;
   }
 
+  /**
+   * Get the list of remote repositories used by this MavenUtils instance.
+   *
+   * @return list of RemoteRepository
+   */
   public List<RemoteRepository> getRemoteRepositories() {
     return remoteRepositories;
   }

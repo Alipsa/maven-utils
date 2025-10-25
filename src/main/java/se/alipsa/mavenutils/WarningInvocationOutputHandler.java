@@ -9,6 +9,13 @@ import org.apache.maven.shared.invoker.InvocationOutputHandler;
  */
 public class WarningInvocationOutputHandler implements InvocationOutputHandler {
 
+  /**
+   * Constructs a WarningInvocationOutputHandler.
+   */
+  public WarningInvocationOutputHandler() {
+    // Default constructor
+  }
+
   @Override
   public void consumeLine(String line) {
     System.err.println(line);

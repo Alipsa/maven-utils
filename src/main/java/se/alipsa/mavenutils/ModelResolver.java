@@ -36,6 +36,14 @@ public class ModelResolver implements org.apache.maven.model.resolution.ModelRes
   private final Set<String> repositoryIds = new HashSet<>();
   private final RemoteRepositoryManager remoteRepositoryManager;
 
+  /**
+   * Constructs a ModelResolver with the specified remote repositories,
+   * repository system session, and repository system.
+   *
+   * @param remoteRepositories       the list of remote repositories
+   * @param repositorySystemSession  the repository system session
+   * @param repositorySystem         the repository system
+   */
   public ModelResolver(List<RemoteRepository> remoteRepositories, RepositorySystemSession repositorySystemSession,
                        RepositorySystem repositorySystem) {
     this.remoteRepositories = remoteRepositories;
