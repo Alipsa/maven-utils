@@ -1,5 +1,9 @@
 # maven-utils
 
+maven-3.9.11-utils:
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.11-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.11-utils)
+[![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.9.11-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.9.11-utils)
+
 maven-3.9.4-utils:
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.4-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.4-utils)
 [![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.9.4-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.9.4-utils)
@@ -14,29 +18,13 @@ maven-3.3.9-utils:
 
 High level api to interact with maven from within the jvm
 
-Use it by adding the dependency to your maven pom:
+Use it by adding the dependency to your maven pom, e.g:
 ```xml
 <dependency>
     <groupId>se.alipsa</groupId>
-    <artifactId>maven-3.9.4-utils</artifactId>
-    <!-- or if you prefer the maven 3.3.9 version:
-    <artifactId>maven-3.3.9-utils</artifactId>
-    -->
-    <version>1.1.0</version>
-
+    <artifactId>maven-3.9.11-utils</artifactId>
+    <version>1.0.0</version>
 </dependency>
-```
-
-For SNAPSHOT builds you need to have snapshots enabled for the sonatype snapshots repo. Production releases are available 
-in maven central so no repository configuration is needed.
-
-```xml
-<repository>
-    <id>snapshots-repo</id>
-    <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    <releases><enabled>false</enabled></releases>
-    <snapshots><enabled>true</enabled></snapshots>
-</repository>
 ```
 
 ## Basic usage
