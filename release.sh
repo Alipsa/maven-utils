@@ -3,7 +3,7 @@ if [[ $(git status --porcelain) ]]; then
   echo "Git changes detected, commit all changes first before releasing"
   exit
 fi
-if [[ -d build ]]; then
+if [[ ! -d build ]]; then
   mkdir "build"
 fi
 rm target/*.jar
