@@ -2,6 +2,10 @@
 
 ## Version history
 
+### 1.1.1, Oct 25, 2025
+- Upgrade dependencies
+- Add javadocs
+
 ### 1.1.0, Apr 17, 2025
 - add addRemoteRepository methods to MavenUtils
 - change default remotes to only include Maven Central

@@ -15,6 +15,13 @@ public class ConsoleRepositoryEventListener extends AbstractRepositoryListener {
 
    private static final Logger LOG = LoggerFactory.getLogger(ConsoleRepositoryEventListener.class);
 
+   /**
+    * Constructs a new ConsoleRepositoryEventListener.
+    */
+   public ConsoleRepositoryEventListener() {
+      super();
+   }
+
    @Override
    public void artifactInstalled(RepositoryEvent event) {
       LOG.debug("artifact {} installed to file {}", event.getArtifact(), event.getFile());

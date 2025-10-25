@@ -15,6 +15,9 @@ public class EnvUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(EnvUtils.class);
 
+  private EnvUtils() {
+    // private constructor to prevent instantiation
+  }
   /**
    * A reasonably bulletproof way to get the user's home directory on any OS.
    * the .m2/settings.xml resides in the user's home dir so the primary purpose of this method
@@ -45,6 +48,13 @@ public class EnvUtils {
     return homeDir;
   }
 
+  /**
+   * Parses command-line arguments to extract system properties.
+   * Arguments should be in the format -Dkey=value.
+   *
+   * @param args the command-line arguments
+   * @return a Properties object containing the parsed system properties
+   */
   public static Properties parseArguments(String[] args) {
     Properties sysProps = new Properties();
     for (String arg : args) {
