@@ -7,6 +7,7 @@ import org.apache.maven.model.Model;
 import org.apache.maven.model.building.ModelBuildingException;
 import org.apache.maven.settings.building.SettingsBuildingException;
 import org.apache.maven.shared.invoker.InvocationResult;
+import org.apache.maven.shared.invoker.InvocationRequest;
 import org.apache.maven.shared.invoker.MavenInvocationException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.eclipse.aether.repository.LocalRepository;
@@ -19,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
@@ -92,6 +94,42 @@ public class MavenUtilsTest {
     File pomFile = Paths.get(getClass().getResource("/pom/simple.xml").toURI()).toFile();
     InvocationResult result = MavenUtils.runMaven(pomFile, new String[]{"validate"}, null, null);
     assertEquals(0, result.getExitCode(), "exit code");
+  }
+
+  @Test
+  public void buildInvocationRequestSeparatesGoalsAndFlags() throws URISyntaxException {
+    File pomFile = Paths.get(getClass().getResource("/pom/simple.xml").toURI()).toFile();
+    File javaHome = new File(System.getProperty("java.home"));
+    InvocationRequest request = MavenUtils.buildInvocationRequest(
+        pomFile,
+        new String[]{"-DskipTests", "-Dfoo=bar=baz", "-nsu", "-Pabc,def", "-pl", "module-a,module-b", "-rf", "module-c", "-q", "validate"},
+        javaHome
+    );
+
+    assertEquals(List.of("validate"), request.getGoals());
+    assertEquals("", request.getProperties().getProperty("skipTests"));
+    assertEquals("bar=baz", request.getProperties().getProperty("foo"));
+    assertEquals(javaHome, request.getJavaHome());
+    assertTrue(request.isQuiet());
+    assertEquals(List.of("abc", "def"), request.getProfiles());
+    assertEquals(List.of("module-a", "module-b"), request.getProjects());
+    assertEquals("module-c", request.getResumeFrom());
+    assertNotNull(request.getArgs());
+    assertTrue(request.getArgs().contains("-nsu"));
+  }
+
+  @Test
+  public void resolveMavenHomeFromExecutableUsesReportedHome() throws Exception {
+    File tempDir = Files.createTempDirectory("mvn-home").toFile();
+    File mvnScript = new File(tempDir, "mvn");
+    String expectedHome = new File(tempDir, "apache-maven").getAbsolutePath();
+    String script = "#!/usr/bin/env bash\n" +
+        "echo \"" + expectedHome + "\"\n";
+    Files.writeString(mvnScript.toPath(), script);
+    assertTrue(mvnScript.setExecutable(true));
+
+    String resolved = MavenUtils.resolveMavenHomeFromExecutable(mvnScript);
+    assertEquals(expectedHome, resolved);
   }
 
   @Test

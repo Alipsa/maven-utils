@@ -38,10 +38,12 @@ File pomFile = new File("pom.xml");
 InvocationResult result = MavenUtils.runMaven(pomFile, new String[]{"clean", "install"}, null, null);
 ```
 The arguments to `runMaven(final File pomFile, String[] mvnArgs,
+@Nullable File javaHome,
 @Nullable InvocationOutputHandler consoleOutputHandler,
 @Nullable InvocationOutputHandler warningOutputHandler)` are as follows:
 - pomFile the pom.xml file to parse
-- mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+- mvnArgs the arguments (targets) to send to maven (e.g. clean install). Flags (like `-DskipTests`, `-Pprofile`, `-pl module`) are parsed into the appropriate invocation request fields rather than being treated as goals.
+- javaHome an optional Java home to use for this invocation; if null, the default JAVA_HOME is used
 - consoleOutputHandler where normal maven output will be sent, defaults to System.out if null
 - warningOutputHandler where maven warning outputs will be sent, defaults to System.err if null
 - InvocationResult the result of running the targets
