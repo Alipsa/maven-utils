@@ -23,7 +23,7 @@ Use it by adding the dependency to your maven pom, e.g:
 <dependency>
     <groupId>se.alipsa</groupId>
     <artifactId>maven-3.9.11-utils</artifactId>
-    <version>1.0.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -145,10 +145,13 @@ Used for logging. Licence: MIT
 Used to run maven. Licence: Apache 2.0
 
 ### org.apache.maven.shared:maven-shared-utils
-Used to run maven and to parse the pom file. Licence: Apache 2.0
+Used to run maven and to parse the pom file. License: Apache 2.0
 
 ### org.apache.maven:maven-core
-Used to run maven and to parse the pom file. Licence: Apache 2.0
+Used to run maven and to parse the pom file. License: Apache 2.0
+
+### org.apache.maven:maven-resolver-supplier
+Used to run maven and to parse the pom file. License: Apache 2.0
 
 ### org.eclipse.aether:aether-connector-basic
 Used to resolve dependencies. License: EPL 1.0

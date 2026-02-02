@@ -97,6 +97,30 @@ public class MavenUtilsTest {
   }
 
   @Test
+  public void runMavenWithJavaHomeAndConsumers() throws URISyntaxException, MavenInvocationException {
+    File pomFile = Paths.get(getClass().getResource("/pom/simple.xml").toURI()).toFile();
+    File javaHome = new File(System.getProperty("java.home"));
+
+    List<String> outLines = new java.util.ArrayList<>();
+    List<String> errLines = new java.util.ArrayList<>();
+
+    // Explicitly type the consumers to resolve method ambiguity
+    java.util.function.Consumer<String> outConsumer = outLines::add;
+    java.util.function.Consumer<String> errConsumer = errLines::add;
+
+    int exitCode = MavenUtils.runMaven(
+        pomFile,
+        new String[]{"validate"},
+        javaHome,
+        outConsumer,
+        errConsumer
+    );
+
+    assertEquals(0, exitCode, "exit code should be 0 for successful build");
+    assertTrue(outLines.size() > 0 || errLines.size() > 0, "should have captured some output");
+  }
+
+  @Test
   public void buildInvocationRequestSeparatesGoalsAndFlags() throws URISyntaxException {
     File pomFile = Paths.get(getClass().getResource("/pom/simple.xml").toURI()).toFile();
     File javaHome = new File(System.getProperty("java.home"));

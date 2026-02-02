@@ -21,21 +21,16 @@ import org.apache.maven.settings.io.DefaultSettingsWriter;
 import org.apache.maven.settings.validation.DefaultSettingsValidator;
 import org.apache.maven.shared.invoker.*;
 import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.supplier.RepositorySystemSupplier;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
-import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyFilter;
-import org.eclipse.aether.impl.DefaultServiceLocator;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
-import org.eclipse.aether.spi.connector.transport.TransporterFactory;
-import org.eclipse.aether.transport.file.FileTransporterFactory;
-import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.filter.DependencyFilterUtils;
 
@@ -213,9 +208,38 @@ public class MavenUtils {
       // Without maven home, only a small subset of maven commands will work
       LOG.warn("No MAVEN_HOME set or set to an non existing maven home: {}, this might not go well...", mavenHome);
     }
-    invoker.setOutputHandler(consoleOutputHandler == null ? new ConsoleInvocationOutputHandler() : consoleOutputHandler);
-    invoker.setErrorHandler(warningOutputHandler == null ? new WarningInvocationOutputHandler() : warningOutputHandler);
+    request.setOutputHandler(consoleOutputHandler == null ? new ConsoleInvocationOutputHandler() : consoleOutputHandler);
+    request.setErrorHandler(warningOutputHandler == null ? new WarningInvocationOutputHandler() : warningOutputHandler);
     return invoker.execute( request );
+  }
+
+  /**
+   * Run maven with the given arguments, allowing per-invocation Java home override.
+   * This is a convenience method that returns the exit code directly and uses Consumer-based output handlers.
+   * <p>
+   * <b>Note:</b> If the compiler reports method ambiguity, explicitly type the Consumer variables:
+   * <pre>{@code
+   * java.util.function.Consumer<String> outConsumer = System.out::println;
+   * java.util.function.Consumer<String> errConsumer = System.err::println;
+   * int exitCode = MavenUtils.runMaven(pomFile, mvnArgs, javaHome, outConsumer, errConsumer);
+   * }</pre>
+   * This is needed because InvocationOutputHandler is a functional interface with a compatible signature.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+   * @param javaHome the Java home to use for this invocation (required)
+   * @param outConsumer consumer for standard output lines, can be null
+   * @param errConsumer consumer for error output lines, can be null
+   * @return the Maven exit code (0 for success, non-zero for failure)
+   * @throws MavenInvocationException if there is a problem with parsing or running maven
+   */
+  public static int runMaven(final File pomFile, String[] mvnArgs, File javaHome,
+                             @Nullable java.util.function.Consumer<String> outConsumer,
+                             @Nullable java.util.function.Consumer<String> errConsumer) throws MavenInvocationException {
+    InvocationOutputHandler consoleHandler = outConsumer != null ? outConsumer::accept : null;
+    InvocationOutputHandler errorHandler = errConsumer != null ? errConsumer::accept : null;
+    InvocationResult result = runMaven(pomFile, mvnArgs, javaHome, consoleHandler, errorHandler);
+    return result.getExitCode();
   }
 
   private static ParsedMavenInvocation parseMavenArguments(String[] mvnArgs) {
@@ -562,10 +586,19 @@ public class MavenUtils {
   }
 
   /**
-   * Resolve the dependencies for the given pom file.
+   * Parse the given POM file and return its effective model.
+   * <p>
+   * This method uses a {@link ModelResolver} initialized with the repositories configured in the
+   * {@link MavenUtils} constructor (typically Maven Central plus any custom repositories).
+   * During model building, Maven's {@link org.apache.maven.model.building.DefaultModelBuilder}
+   * automatically calls {@link ModelResolver#addRepository(Repository)} when it encounters
+   * {@code <repositories>} sections in the POM or its parent POMs. These discovered repositories
+   * are aggregated with the initial repositories, making them available for parent POM resolution
+   * and dependency resolution.
+   * </p>
    *
    * @param pomFile the pom.xml file to parse
-   * @return a Model (i.e. the Maven object representation of the pom file)
+   * @return a Model (i.e. the Maven object representation of the effective pom file)
    * @throws SettingsBuildingException if there was some issue with building the maven settings context
    * @throws ModelBuildingException if there was some issue with the pom file
    */
@@ -575,8 +608,6 @@ public class MavenUtils {
     RepositorySystem repositorySystem = getRepositorySystem();
     RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem);
     modelBuildingRequest.setModelResolver(new ModelResolver(
-        // TODO: we need a model to get the real remote repositories but we dont have that yet
-        //  cheating by using the ones passed in
         remoteRepositories,
         repositorySystemSession,
         repositorySystem
@@ -660,20 +691,8 @@ public class MavenUtils {
   }
 
   static RepositorySystem getRepositorySystem() {
-    DefaultServiceLocator serviceLocator = MavenRepositorySystemUtils.newServiceLocator();
-    serviceLocator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
-    serviceLocator.addService(TransporterFactory.class, FileTransporterFactory.class);
-
-    serviceLocator.addService(TransporterFactory.class, HttpTransporterFactory.class);
-
-    serviceLocator.setErrorHandler(new DefaultServiceLocator.ErrorHandler() {
-      @Override
-      public void serviceCreationFailed(Class<?> type, Class<?> impl, Throwable exception) {
-        LOG.warn("Error creating Maven service", exception);
-      }
-    });
-
-    return serviceLocator.getService(RepositorySystem.class);
+    // Use the modern RepositorySystemSupplier instead of deprecated DefaultServiceLocator
+    return new RepositorySystemSupplier().get();
   }
 
   static DefaultRepositorySystemSession getRepositorySystemSession(RepositorySystem system) throws SettingsBuildingException {
