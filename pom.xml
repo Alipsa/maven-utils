@@ -5,13 +5,24 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>se.alipsa</groupId>
-    <artifactId>maven-3.9.11-utils</artifactId>
-    <version>1.2.0</version>
+    <artifactId>maven-utils</artifactId>
+    <version>1.3.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>maven-utils</name>
     <description>High level api to interact with maven from within the jvm</description>
     <url>https://github.com/Alipsa/maven-utils</url>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>${maven.compiler.source}</maven.compiler.target>
+        <maven.compiler.release>${maven.compiler.target}</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven-core.version>3.9.12</maven-core.version>
+        <maven-resolver.version>1.9.25</maven-resolver.version>
+    </properties>
+
     <licenses>
         <license>
             <name>MIT License</name>
@@ -31,13 +42,6 @@
         <developerConnection>scm:git:git@github.com:Alipsa/maven-utils.git</developerConnection>
         <url>https://github.com/Alipsa/maven-utils/tree/main</url>
     </scm>
-    <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>${maven.compiler.source}</maven.compiler.target>
-        <maven.compiler.release>${maven.compiler.target}</maven.compiler.release>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    </properties>
     <dependencies>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -68,7 +72,7 @@
         <dependency>
             <groupId>org.apache.maven</groupId>
             <artifactId>maven-core</artifactId>
-            <version>3.9.11</version>
+            <version>${maven-core.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.google.guava</groupId>
@@ -85,22 +89,22 @@
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-connector-basic</artifactId>
-            <version>1.9.24</version>
+            <version>${maven-resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-transport-file</artifactId>
-            <version>1.9.24</version>
+            <version>${maven-resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-transport-http</artifactId>
-            <version>1.9.24</version>
+            <version>${maven-resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-supplier</artifactId>
-            <version>1.9.24</version>
+            <version>${maven-resolver.version}</version>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
