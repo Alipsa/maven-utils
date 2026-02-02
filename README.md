@@ -23,7 +23,7 @@ Use it by adding the dependency to your maven pom, e.g:
 <dependency>
     <groupId>se.alipsa</groupId>
     <artifactId>maven-3.9.11-utils</artifactId>
-    <version>1.0.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
@@ -38,10 +38,12 @@ File pomFile = new File("pom.xml");
 InvocationResult result = MavenUtils.runMaven(pomFile, new String[]{"clean", "install"}, null, null);
 ```
 The arguments to `runMaven(final File pomFile, String[] mvnArgs,
+@Nullable File javaHome,
 @Nullable InvocationOutputHandler consoleOutputHandler,
 @Nullable InvocationOutputHandler warningOutputHandler)` are as follows:
 - pomFile the pom.xml file to parse
-- mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+- mvnArgs the arguments (targets) to send to maven (e.g. clean install). Flags (like `-DskipTests`, `-Pprofile`, `-pl module`) are parsed into the appropriate invocation request fields rather than being treated as goals.
+- javaHome an optional Java home to use for this invocation; if null, the default JAVA_HOME is used
 - consoleOutputHandler where normal maven output will be sent, defaults to System.out if null
 - warningOutputHandler where maven warning outputs will be sent, defaults to System.err if null
 - InvocationResult the result of running the targets
@@ -143,10 +145,13 @@ Used for logging. Licence: MIT
 Used to run maven. Licence: Apache 2.0
 
 ### org.apache.maven.shared:maven-shared-utils
-Used to run maven and to parse the pom file. Licence: Apache 2.0
+Used to run maven and to parse the pom file. License: Apache 2.0
 
 ### org.apache.maven:maven-core
-Used to run maven and to parse the pom file. Licence: Apache 2.0
+Used to run maven and to parse the pom file. License: Apache 2.0
+
+### org.apache.maven:maven-resolver-supplier
+Used to run maven and to parse the pom file. License: Apache 2.0
 
 ### org.eclipse.aether:aether-connector-basic
 Used to resolve dependencies. License: EPL 1.0

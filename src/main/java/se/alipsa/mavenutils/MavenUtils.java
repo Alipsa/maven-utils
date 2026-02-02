@@ -21,26 +21,24 @@ import org.apache.maven.settings.io.DefaultSettingsWriter;
 import org.apache.maven.settings.validation.DefaultSettingsValidator;
 import org.apache.maven.shared.invoker.*;
 import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.supplier.RepositorySystemSupplier;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
 import org.eclipse.aether.collection.CollectRequest;
-import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
 import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyFilter;
-import org.eclipse.aether.impl.DefaultServiceLocator;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
-import org.eclipse.aether.spi.connector.transport.TransporterFactory;
-import org.eclipse.aether.transport.file.FileTransporterFactory;
-import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.filter.DependencyFilterUtils;
 
 import javax.annotation.Nullable;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.*;
@@ -107,8 +105,63 @@ public class MavenUtils {
    * @return RemoteRepository for BeDataDriven Maven repo
    */
   public static RemoteRepository getBeDataDrivenMavenRepository() {
-    return new RemoteRepository.Builder("bedatadriven", "default", "https://nexus.bedatadriven.com/content/groups/public/")
+   return new RemoteRepository.Builder("bedatadriven", "default", "https://nexus.bedatadriven.com/content/groups/public/")
         .build();
+  }
+
+  static InvocationRequest buildInvocationRequest(final File pomFile, String[] mvnArgs, @Nullable File javaHome) {
+    ParsedMavenInvocation parsed = parseMavenArguments(mvnArgs);
+    File dir = pomFile.getParentFile();
+    InvocationRequest request = new DefaultInvocationRequest()
+        .setBatchMode(true)
+        .setPomFile(pomFile)
+        .setBaseDirectory(dir)
+        .setGoals(parsed.goals.isEmpty() ? Collections.emptyList() : parsed.goals);
+
+    if (!parsed.properties.isEmpty()) {
+      request.setProperties(parsed.properties);
+    }
+    if (!parsed.profiles.isEmpty()) {
+      request.setProfiles(parsed.profiles);
+    }
+    if (!parsed.projects.isEmpty()) {
+      request.setProjects(parsed.projects);
+    }
+    if (parsed.userSettingsFile != null) {
+      request.setUserSettingsFile(parsed.userSettingsFile);
+    }
+    if (parsed.globalSettingsFile != null) {
+      request.setGlobalSettingsFile(parsed.globalSettingsFile);
+    }
+    if (parsed.toolchainsFile != null) {
+      request.setToolchainsFile(parsed.toolchainsFile);
+    }
+    if (parsed.threads != null) {
+      request.setThreads(parsed.threads);
+    }
+    if (parsed.resumeFrom != null) {
+      request.setResumeFrom(parsed.resumeFrom);
+    }
+    if (parsed.reactorFailureBehavior != null) {
+      request.setReactorFailureBehavior(parsed.reactorFailureBehavior);
+    }
+
+    request.setAlsoMake(parsed.alsoMake);
+    request.setAlsoMakeDependents(parsed.alsoMakeDependents);
+    request.setOffline(parsed.offline);
+    request.setUpdateSnapshots(parsed.updateSnapshots);
+    request.setDebug(parsed.debug);
+    request.setShowErrors(parsed.showErrors);
+    request.setQuiet(parsed.quiet);
+    request.setNoTransferProgress(parsed.noTransferProgress);
+
+    if (javaHome != null) {
+      request.setJavaHome(javaHome);
+    }
+    if (!parsed.additionalArgs.isEmpty()) {
+      request.addArgs(parsed.additionalArgs);
+    }
+    return request;
   }
 
   /**
@@ -124,19 +177,27 @@ public class MavenUtils {
   public static InvocationResult runMaven(final File pomFile, String[] mvnArgs,
                                           @Nullable InvocationOutputHandler consoleOutputHandler,
                                           @Nullable InvocationOutputHandler warningOutputHandler) throws MavenInvocationException {
-    File dir = pomFile.getParentFile();
-    Properties sysProps = EnvUtils.parseArguments(mvnArgs);
-    InvocationRequest request = new DefaultInvocationRequest()
-        .setBatchMode(true)
-        .setPomFile( pomFile )
-        .setGoals(Arrays.asList(mvnArgs))
-        .setBaseDirectory(dir);
+    return runMaven(pomFile, mvnArgs, null, consoleOutputHandler, warningOutputHandler);
+  }
 
-    if (!sysProps.isEmpty()) {
-      request.getProperties().putAll(sysProps);
-    }
+  /**
+   * Run maven with the given arguments (targets) on the given pom file using a specific Java home.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+   * @param javaHome the Java home to use for this invocation, or null to use the default
+   * @param consoleOutputHandler where normal maven output will be sent, defaults to System.out
+   * @param warningOutputHandler where maven warning outputs will be sent, defaults to System.err
+   * @return InvocationResult the result of running the targets
+   * @throws MavenInvocationException if there is a problem with parsing or running maven
+   */
+  public static InvocationResult runMaven(final File pomFile, String[] mvnArgs,
+                                          @Nullable File javaHome,
+                                          @Nullable InvocationOutputHandler consoleOutputHandler,
+                                          @Nullable InvocationOutputHandler warningOutputHandler) throws MavenInvocationException {
+    InvocationRequest request = buildInvocationRequest(pomFile, mvnArgs, javaHome);
 
-    LOG.info("Running maven from dir {} with args {}", dir, String.join(" ", mvnArgs));
+    LOG.info("Running maven from dir {} with goals {} and args {}", request.getBaseDirectory(), request.getGoals(), request.getArgs());
     Invoker invoker = new DefaultInvoker();
     String mavenHome = locateMavenHome();
     File mavenHomeDir = new File(mavenHome);
@@ -147,9 +208,254 @@ public class MavenUtils {
       // Without maven home, only a small subset of maven commands will work
       LOG.warn("No MAVEN_HOME set or set to an non existing maven home: {}, this might not go well...", mavenHome);
     }
-    invoker.setOutputHandler(consoleOutputHandler == null ? new ConsoleInvocationOutputHandler() : consoleOutputHandler);
-    invoker.setErrorHandler(warningOutputHandler == null ? new WarningInvocationOutputHandler() : warningOutputHandler);
+    request.setOutputHandler(consoleOutputHandler == null ? new ConsoleInvocationOutputHandler() : consoleOutputHandler);
+    request.setErrorHandler(warningOutputHandler == null ? new WarningInvocationOutputHandler() : warningOutputHandler);
     return invoker.execute( request );
+  }
+
+  /**
+   * Run maven with the given arguments, allowing per-invocation Java home override.
+   * This is a convenience method that returns the exit code directly and uses Consumer-based output handlers.
+   * <p>
+   * <b>Note:</b> If the compiler reports method ambiguity, explicitly type the Consumer variables:
+   * <pre>{@code
+   * java.util.function.Consumer<String> outConsumer = System.out::println;
+   * java.util.function.Consumer<String> errConsumer = System.err::println;
+   * int exitCode = MavenUtils.runMaven(pomFile, mvnArgs, javaHome, outConsumer, errConsumer);
+   * }</pre>
+   * This is needed because InvocationOutputHandler is a functional interface with a compatible signature.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+   * @param javaHome the Java home to use for this invocation (required)
+   * @param outConsumer consumer for standard output lines, can be null
+   * @param errConsumer consumer for error output lines, can be null
+   * @return the Maven exit code (0 for success, non-zero for failure)
+   * @throws MavenInvocationException if there is a problem with parsing or running maven
+   */
+  public static int runMaven(final File pomFile, String[] mvnArgs, File javaHome,
+                             @Nullable java.util.function.Consumer<String> outConsumer,
+                             @Nullable java.util.function.Consumer<String> errConsumer) throws MavenInvocationException {
+    InvocationOutputHandler consoleHandler = outConsumer != null ? outConsumer::accept : null;
+    InvocationOutputHandler errorHandler = errConsumer != null ? errConsumer::accept : null;
+    InvocationResult result = runMaven(pomFile, mvnArgs, javaHome, consoleHandler, errorHandler);
+    return result.getExitCode();
+  }
+
+  private static ParsedMavenInvocation parseMavenArguments(String[] mvnArgs) {
+    ParsedMavenInvocation parsed = new ParsedMavenInvocation();
+    if (mvnArgs == null) {
+      return parsed;
+    }
+    for (int i = 0; i < mvnArgs.length; i++) {
+      String arg = mvnArgs[i];
+      if (arg == null || arg.isBlank()) {
+        continue;
+      }
+      if (arg.startsWith("-D")) {
+        parsed.addProperty(arg.substring(2));
+        continue;
+      }
+      if ("-P".equals(arg) || arg.startsWith("-P")) {
+        String value = consumeOptionValue(arg, mvnArgs, i, 2);
+        if (value != null) {
+          parsed.addProfiles(value);
+          if ("-P".equals(arg)) {
+            i++;
+          }
+        } else {
+          parsed.additionalArgs.add(arg);
+        }
+        continue;
+      }
+      if ("-s".equals(arg) || arg.startsWith("-s") || "--settings".equals(arg) || arg.startsWith("--settings")) {
+        int prefixLength = arg.startsWith("--") ? 10 : 2;
+        String value = consumeOptionValue(arg, mvnArgs, i, prefixLength);
+        if (value != null) {
+          parsed.userSettingsFile = new File(value);
+          if ("-s".equals(arg) || "--settings".equals(arg)) {
+            i++;
+          }
+        } else {
+          parsed.additionalArgs.add(arg);
+        }
+        continue;
+      }
+      if ("-gs".equals(arg) || arg.startsWith("-gs") || "--global-settings".equals(arg) || arg.startsWith("--global-settings")) {
+        int prefixLength = arg.startsWith("--") ? 17 : 3;
+        String value = consumeOptionValue(arg, mvnArgs, i, prefixLength);
+        if (value != null) {
+          parsed.globalSettingsFile = new File(value);
+          if ("-gs".equals(arg) || "--global-settings".equals(arg)) {
+            i++;
+          }
+        } else {
+          parsed.additionalArgs.add(arg);
+        }
+        continue;
+      }
+      if ("-t".equals(arg) || arg.startsWith("-t") || "--toolchains".equals(arg) || arg.startsWith("--toolchains")) {
+        int prefixLength = arg.startsWith("--") ? 12 : 2;
+        String value = consumeOptionValue(arg, mvnArgs, i, prefixLength);
+        if (value != null) {
+          parsed.toolchainsFile = new File(value);
+          if ("-t".equals(arg) || "--toolchains".equals(arg)) {
+            i++;
+          }
+        } else {
+          parsed.additionalArgs.add(arg);
+        }
+        continue;
+      }
+      if ("-pl".equals(arg) || arg.startsWith("-pl")) {
+        String value = consumeOptionValue(arg, mvnArgs, i, 3);
+        if (value != null) {
+          parsed.addProjects(value);
+          if ("-pl".equals(arg)) {
+            i++;
+          }
+        } else {
+          parsed.additionalArgs.add(arg);
+        }
+        continue;
+      }
+      if ("-rf".equals(arg) || arg.startsWith("-rf")) {
+        String value = consumeOptionValue(arg, mvnArgs, i, 3);
+        if (value != null) {
+          parsed.resumeFrom = value;
+          if ("-rf".equals(arg)) {
+            i++;
+          }
+        } else {
+          parsed.additionalArgs.add(arg);
+        }
+        continue;
+      }
+      if ("-T".equals(arg) || arg.startsWith("-T")) {
+        String value = consumeOptionValue(arg, mvnArgs, i, 2);
+        if (value != null) {
+          parsed.threads = value;
+          if ("-T".equals(arg)) {
+            i++;
+          }
+        } else {
+          parsed.additionalArgs.add(arg);
+        }
+        continue;
+      }
+      switch (arg) {
+        case "-am":
+          parsed.alsoMake = true;
+          continue;
+        case "-amd":
+          parsed.alsoMakeDependents = true;
+          continue;
+        case "-U":
+          parsed.updateSnapshots = true;
+          continue;
+        case "-o":
+        case "--offline":
+          parsed.offline = true;
+          continue;
+        case "-q":
+        case "--quiet":
+          parsed.quiet = true;
+          continue;
+        case "-X":
+        case "--debug":
+          parsed.debug = true;
+          continue;
+        case "-e":
+        case "--errors":
+          parsed.showErrors = true;
+          continue;
+        case "-ntp":
+        case "--no-transfer-progress":
+          parsed.noTransferProgress = true;
+          continue;
+        case "-fae":
+          parsed.reactorFailureBehavior = InvocationRequest.ReactorFailureBehavior.FailAtEnd;
+          continue;
+        case "-ff":
+          parsed.reactorFailureBehavior = InvocationRequest.ReactorFailureBehavior.FailFast;
+          continue;
+        case "-fn":
+          parsed.reactorFailureBehavior = InvocationRequest.ReactorFailureBehavior.FailNever;
+          continue;
+        default:
+          if (arg.startsWith("-")) {
+            parsed.additionalArgs.add(arg);
+          } else {
+            parsed.goals.add(arg);
+          }
+      }
+    }
+    return parsed;
+  }
+
+  private static String consumeOptionValue(String currentArg, String[] args, int index, int prefixLength) {
+    if (currentArg.length() > prefixLength) {
+      String value = currentArg.substring(prefixLength);
+      if (value.startsWith("=")) {
+        value = value.substring(1);
+      }
+      return value.isEmpty() ? null : value;
+    }
+    if (index + 1 < args.length) {
+      return args[index + 1];
+    }
+    return null;
+  }
+
+  private static final class ParsedMavenInvocation {
+    private final List<String> goals = new ArrayList<>();
+    private final Properties properties = new Properties();
+    private final List<String> profiles = new ArrayList<>();
+    private final List<String> projects = new ArrayList<>();
+    private final List<String> additionalArgs = new ArrayList<>();
+    private boolean alsoMake;
+    private boolean alsoMakeDependents;
+    private boolean offline;
+    private boolean updateSnapshots;
+    private boolean debug;
+    private boolean showErrors;
+    private boolean quiet;
+    private boolean noTransferProgress;
+    private String threads;
+    private String resumeFrom;
+    private InvocationRequest.ReactorFailureBehavior reactorFailureBehavior;
+    private File userSettingsFile;
+    private File globalSettingsFile;
+    private File toolchainsFile;
+
+    private void addProperty(String expression) {
+      int equalsIndex = expression.indexOf('=');
+      if (equalsIndex < 0) {
+        properties.setProperty(expression, "");
+      } else {
+        properties.setProperty(expression.substring(0, equalsIndex), expression.substring(equalsIndex + 1));
+      }
+    }
+
+    private void addProfiles(String profilesArg) {
+      if (profilesArg == null || profilesArg.isBlank()) {
+        return;
+      }
+      Arrays.stream(profilesArg.split(","))
+          .map(String::trim)
+          .filter(s -> !s.isEmpty())
+          .forEach(profiles::add);
+    }
+
+    private void addProjects(String projectsArg) {
+      if (projectsArg == null || projectsArg.isBlank()) {
+        return;
+      }
+      Arrays.stream(projectsArg.split(","))
+          .map(String::trim)
+          .filter(s -> !s.isEmpty())
+          .forEach(projects::add);
+    }
   }
 
   /**
@@ -280,10 +586,19 @@ public class MavenUtils {
   }
 
   /**
-   * Resolve the dependencies for the given pom file.
+   * Parse the given POM file and return its effective model.
+   * <p>
+   * This method uses a {@link ModelResolver} initialized with the repositories configured in the
+   * {@link MavenUtils} constructor (typically Maven Central plus any custom repositories).
+   * During model building, Maven's {@link org.apache.maven.model.building.DefaultModelBuilder}
+   * automatically calls {@link ModelResolver#addRepository(Repository)} when it encounters
+   * {@code <repositories>} sections in the POM or its parent POMs. These discovered repositories
+   * are aggregated with the initial repositories, making them available for parent POM resolution
+   * and dependency resolution.
+   * </p>
    *
    * @param pomFile the pom.xml file to parse
-   * @return a Model (i.e. the Maven object representation of the pom file)
+   * @return a Model (i.e. the Maven object representation of the effective pom file)
    * @throws SettingsBuildingException if there was some issue with building the maven settings context
    * @throws ModelBuildingException if there was some issue with the pom file
    */
@@ -293,8 +608,6 @@ public class MavenUtils {
     RepositorySystem repositorySystem = getRepositorySystem();
     RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem);
     modelBuildingRequest.setModelResolver(new ModelResolver(
-        // TODO: we need a model to get the real remote repositories but we dont have that yet
-        //  cheating by using the ones passed in
         remoteRepositories,
         repositorySystemSession,
         repositorySystem
@@ -310,37 +623,76 @@ public class MavenUtils {
 
   private static String locateMaven() {
     String path = System.getenv("PATH");
+    if (path == null || path.isBlank()) {
+      return "";
+    }
     String[] pathElements = path.split(File.pathSeparator);
     for (String elem : pathElements) {
       File dir = new File(elem);
-      if (dir.exists()) {
-        String [] files = dir.list();
-        if (files != null) {
-          boolean foundMvn = Arrays.asList(files).contains("mvn");
-          if (foundMvn) {
-            return dir.getParentFile().getAbsolutePath();
-          }
+      if (!dir.isDirectory()) {
+        continue;
+      }
+      File mvn = new File(dir, "mvn");
+      if (mvn.canExecute()) {
+        String home = resolveMavenHomeFromExecutable(mvn);
+        if (!home.isEmpty()) {
+          return home;
+        }
+      }
+      File mvnCmd = new File(dir, "mvn.cmd");
+      if (mvnCmd.canExecute()) {
+        String home = resolveMavenHomeFromExecutable(mvnCmd);
+        if (!home.isEmpty()) {
+          return home;
+        }
+      }
+      File mvnBat = new File(dir, "mvn.bat");
+      if (mvnBat.canExecute()) {
+        String home = resolveMavenHomeFromExecutable(mvnBat);
+        if (!home.isEmpty()) {
+          return home;
         }
       }
     }
     return "";
   }
 
-  static RepositorySystem getRepositorySystem() {
-    DefaultServiceLocator serviceLocator = MavenRepositorySystemUtils.newServiceLocator();
-    serviceLocator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
-    serviceLocator.addService(TransporterFactory.class, FileTransporterFactory.class);
-
-    serviceLocator.addService(TransporterFactory.class, HttpTransporterFactory.class);
-
-    serviceLocator.setErrorHandler(new DefaultServiceLocator.ErrorHandler() {
-      @Override
-      public void serviceCreationFailed(Class<?> type, Class<?> impl, Throwable exception) {
-        LOG.warn("Error creating Maven service", exception);
+  static String resolveMavenHomeFromExecutable(File mvnExecutable) {
+    ProcessBuilder pb = new ProcessBuilder(
+        mvnExecutable.getAbsolutePath(),
+        "help:evaluate",
+        "-Dexpression=maven.home",
+        "-q",
+        "-DforceStdout"
+    );
+    pb.redirectErrorStream(true);
+    try {
+      Process process = pb.start();
+      String output;
+      try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+        output = reader.lines()
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .findFirst()
+            .orElse("");
       }
-    });
+      int exit = process.waitFor();
+      if (exit == 0 && !output.isBlank()) {
+        return output;
+      }
+      LOG.warn("Failed to evaluate maven.home using {} (exit code {}), output: {}", mvnExecutable, exit, output);
+    } catch (IOException e) {
+      LOG.warn("Failed to execute {} to determine Maven home: {}", mvnExecutable, e.toString());
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      LOG.warn("Interrupted while resolving Maven home using {}", mvnExecutable);
+    }
+    return "";
+  }
 
-    return serviceLocator.getService(RepositorySystem.class);
+  static RepositorySystem getRepositorySystem() {
+    // Use the modern RepositorySystemSupplier instead of deprecated DefaultServiceLocator
+    return new RepositorySystemSupplier().get();
   }
 
   static DefaultRepositorySystemSession getRepositorySystemSession(RepositorySystem system) throws SettingsBuildingException {

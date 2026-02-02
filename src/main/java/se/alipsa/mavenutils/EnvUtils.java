@@ -57,14 +57,161 @@ public class EnvUtils {
    */
   public static Properties parseArguments(String[] args) {
     Properties sysProps = new Properties();
-    for (String arg : args) {
-      if (arg.startsWith("-D") && arg.contains("=")) {
-        String[] prop = arg.split("=");
-        String key = prop[0].substring(2);
-        String value = prop[1];
-        sysProps.setProperty(key, value);
+    if (args == null) {
+      return sysProps;
+    }
+
+    for (int i = 0; i < args.length; i++) {
+      String arg = args[i];
+      if (arg == null || arg.isBlank()) {
+        continue;
+      }
+
+      if (arg.startsWith("-D")) {
+        String expression = arg.substring(2);
+        int eqIdx = expression.indexOf('=');
+        if (eqIdx < 0) {
+          sysProps.setProperty(expression, "");
+        } else {
+          sysProps.setProperty(expression.substring(0, eqIdx), expression.substring(eqIdx + 1));
+        }
+        continue;
+      }
+
+      if ("-P".equals(arg) || arg.startsWith("-P")) {
+        String value = consumeOptionValue(arg, args, i, 2);
+        if (value != null) {
+          sysProps.setProperty("profiles", value);
+          if ("-P".equals(arg)) {
+            i++;
+          }
+        }
+        continue;
+      }
+      if ("-pl".equals(arg) || arg.startsWith("-pl")) {
+        String value = consumeOptionValue(arg, args, i, 3);
+        if (value != null) {
+          sysProps.setProperty("projects", value);
+          if ("-pl".equals(arg)) {
+            i++;
+          }
+        }
+        continue;
+      }
+      if ("-T".equals(arg) || arg.startsWith("-T")) {
+        String value = consumeOptionValue(arg, args, i, 2);
+        if (value != null) {
+          sysProps.setProperty("threads", value);
+          if ("-T".equals(arg)) {
+            i++;
+          }
+        }
+        continue;
+      }
+      if ("-rf".equals(arg) || arg.startsWith("-rf")) {
+        String value = consumeOptionValue(arg, args, i, 3);
+        if (value != null) {
+          sysProps.setProperty("resumeFrom", value);
+          if ("-rf".equals(arg)) {
+            i++;
+          }
+        }
+        continue;
+      }
+      if ("-s".equals(arg) || arg.startsWith("-s") || "--settings".equals(arg) || arg.startsWith("--settings")) {
+        int prefixLength = arg.startsWith("--") ? 10 : 2;
+        String value = consumeOptionValue(arg, args, i, prefixLength);
+        if (value != null) {
+          sysProps.setProperty("settings", value);
+          if ("-s".equals(arg) || "--settings".equals(arg)) {
+            i++;
+          }
+        }
+        continue;
+      }
+      if ("-gs".equals(arg) || arg.startsWith("-gs") || "--global-settings".equals(arg) || arg.startsWith("--global-settings")) {
+        int prefixLength = arg.startsWith("--") ? 17 : 3;
+        String value = consumeOptionValue(arg, args, i, prefixLength);
+        if (value != null) {
+          sysProps.setProperty("globalSettings", value);
+          if ("-gs".equals(arg) || "--global-settings".equals(arg)) {
+            i++;
+          }
+        }
+        continue;
+      }
+      if ("-t".equals(arg) || arg.startsWith("-t") || "--toolchains".equals(arg) || arg.startsWith("--toolchains")) {
+        int prefixLength = arg.startsWith("--") ? 12 : 2;
+        String value = consumeOptionValue(arg, args, i, prefixLength);
+        if (value != null) {
+          sysProps.setProperty("toolchains", value);
+          if ("-t".equals(arg) || "--toolchains".equals(arg)) {
+            i++;
+          }
+        }
+        continue;
+      }
+
+      switch (arg) {
+        case "-q":
+        case "--quiet":
+          sysProps.setProperty("quiet", "true");
+          continue;
+        case "-e":
+        case "--errors":
+          sysProps.setProperty("errors", "true");
+          continue;
+        case "-X":
+        case "--debug":
+          sysProps.setProperty("debug", "true");
+          continue;
+        case "-o":
+        case "--offline":
+          sysProps.setProperty("offline", "true");
+          continue;
+        case "-am":
+          sysProps.setProperty("alsoMake", "true");
+          continue;
+        case "-amd":
+          sysProps.setProperty("alsoMakeDependents", "true");
+          continue;
+        case "-U":
+          sysProps.setProperty("updateSnapshots", "true");
+          continue;
+        case "-nsu":
+          sysProps.setProperty("noSnapshotUpdates", "true");
+          continue;
+        case "-ntp":
+        case "--no-transfer-progress":
+          sysProps.setProperty("noTransferProgress", "true");
+          continue;
+        case "-fae":
+          sysProps.setProperty("reactorFailureBehavior", "failAtEnd");
+          continue;
+        case "-ff":
+          sysProps.setProperty("reactorFailureBehavior", "failFast");
+          continue;
+        case "-fn":
+          sysProps.setProperty("reactorFailureBehavior", "failNever");
+          continue;
+        default:
+          // ignore unknown flags
       }
     }
     return sysProps;
+  }
+
+  private static String consumeOptionValue(String currentArg, String[] args, int index, int prefixLength) {
+    if (currentArg.length() > prefixLength) {
+      String value = currentArg.substring(prefixLength);
+      if (value.startsWith("=")) {
+        value = value.substring(1);
+      }
+      return value.isEmpty() ? null : value;
+    }
+    if (index + 1 < args.length) {
+      return args[index + 1];
+    }
+    return null;
   }
 }

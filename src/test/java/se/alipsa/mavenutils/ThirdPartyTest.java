@@ -48,8 +48,6 @@ public class ThirdPartyTest {
       RepositorySystem repositorySystem = getRepositorySystem();
       RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem);
       return new ModelResolver(
-          // TODO: we need a model to get the real remote repositories but we dont have that yet
-          //  cheating by using the ones passed in
           Collections.singletonList(getCentralMavenRepository()),
           repositorySystemSession,
           repositorySystem
