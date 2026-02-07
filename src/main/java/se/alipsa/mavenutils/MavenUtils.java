@@ -55,10 +55,123 @@ import java.util.*;
 public class MavenUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(MavenUtils.class);
+  private static final String WRAPPER_UNIX = "mvnw";
+  private static final String WRAPPER_WINDOWS = "mvnw.cmd";
+  private static final String WRAPPER_PROPERTIES = ".mvn/wrapper/maven-wrapper.properties";
   private static final RemoteRepository CENTRAL_MAVEN_REPOSITORY = getCentralMavenRepository();
   private static final RemoteRepository BE_DATA_DRIVEN_MAVEN_REPOSITORY = getBeDataDrivenMavenRepository();
 
   private final List<RemoteRepository> remoteRepositories = new ArrayList<>();
+
+  public enum MavenDistributionMode {
+    WRAPPER,
+    HOME,
+    DEFAULT
+  }
+
+  public static final class MavenExecutionOptions {
+
+    private final File projectDir;
+    private final File configuredMavenHome;
+    private final boolean preferWrapper;
+
+    public MavenExecutionOptions() {
+      this(null, null, true);
+    }
+
+    public MavenExecutionOptions(@Nullable File projectDir, @Nullable File configuredMavenHome, boolean preferWrapper) {
+      this.projectDir = projectDir;
+      this.configuredMavenHome = configuredMavenHome;
+      this.preferWrapper = preferWrapper;
+    }
+
+    @Nullable
+    public File getProjectDir() {
+      return projectDir;
+    }
+
+    @Nullable
+    public File getConfiguredMavenHome() {
+      return configuredMavenHome;
+    }
+
+    public boolean isPreferWrapper() {
+      return preferWrapper;
+    }
+  }
+
+  public static final class MavenDistributionSelection {
+
+    private final MavenDistributionMode mode;
+    private final File projectDir;
+    private final File mavenExecutable;
+    private final File mavenHome;
+
+    private MavenDistributionSelection(MavenDistributionMode mode, @Nullable File projectDir, @Nullable File mavenExecutable,
+                                       @Nullable File mavenHome) {
+      this.mode = mode;
+      this.projectDir = projectDir;
+      this.mavenExecutable = mavenExecutable;
+      this.mavenHome = mavenHome;
+    }
+
+    public MavenDistributionMode getMode() {
+      return mode;
+    }
+
+    @Nullable
+    public File getProjectDir() {
+      return projectDir;
+    }
+
+    @Nullable
+    public File getMavenExecutable() {
+      return mavenExecutable;
+    }
+
+    @Nullable
+    public File getMavenHome() {
+      return mavenHome;
+    }
+  }
+
+  public static final class MavenRunResult {
+
+    private final InvocationResult invocationResult;
+    private final MavenDistributionSelection distributionSelection;
+
+    private MavenRunResult(InvocationResult invocationResult, MavenDistributionSelection distributionSelection) {
+      this.invocationResult = invocationResult;
+      this.distributionSelection = distributionSelection;
+    }
+
+    public InvocationResult getInvocationResult() {
+      return invocationResult;
+    }
+
+    public MavenDistributionSelection getDistributionSelection() {
+      return distributionSelection;
+    }
+  }
+
+  public static final class DependenciesResolutionResult {
+
+    private final Set<File> dependencies;
+    private final MavenDistributionSelection distributionSelection;
+
+    private DependenciesResolutionResult(Set<File> dependencies, MavenDistributionSelection distributionSelection) {
+      this.dependencies = Collections.unmodifiableSet(new HashSet<>(dependencies));
+      this.distributionSelection = distributionSelection;
+    }
+
+    public Set<File> getDependencies() {
+      return dependencies;
+    }
+
+    public MavenDistributionSelection getDistributionSelection() {
+      return distributionSelection;
+    }
+  }
 
   /**
    * Default constructor, will use Maven Central remote repository
@@ -177,7 +290,25 @@ public class MavenUtils {
   public static InvocationResult runMaven(final File pomFile, String[] mvnArgs,
                                           @Nullable InvocationOutputHandler consoleOutputHandler,
                                           @Nullable InvocationOutputHandler warningOutputHandler) throws MavenInvocationException {
-    return runMaven(pomFile, mvnArgs, null, consoleOutputHandler, warningOutputHandler);
+    return runMaven(pomFile, mvnArgs, null, null, consoleOutputHandler, warningOutputHandler);
+  }
+
+  /**
+   * Run maven with the given arguments (targets) on the given pom file.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+   * @param options invocation options controlling wrapper/home/default selection
+   * @param consoleOutputHandler where normal maven output will be sent, defaults to System.out
+   * @param warningOutputHandler where maven warning outputs will be sent, defaults to System.err
+   * @return InvocationResult the result of running the targets
+   * @throws MavenInvocationException if there is a problem with parsing or running maven
+   */
+  public static InvocationResult runMaven(final File pomFile, String[] mvnArgs,
+                                          @Nullable MavenExecutionOptions options,
+                                          @Nullable InvocationOutputHandler consoleOutputHandler,
+                                          @Nullable InvocationOutputHandler warningOutputHandler) throws MavenInvocationException {
+    return runMaven(pomFile, mvnArgs, null, options, consoleOutputHandler, warningOutputHandler);
   }
 
   /**
@@ -195,22 +326,48 @@ public class MavenUtils {
                                           @Nullable File javaHome,
                                           @Nullable InvocationOutputHandler consoleOutputHandler,
                                           @Nullable InvocationOutputHandler warningOutputHandler) throws MavenInvocationException {
-    InvocationRequest request = buildInvocationRequest(pomFile, mvnArgs, javaHome);
+    return runMaven(pomFile, mvnArgs, javaHome, null, consoleOutputHandler, warningOutputHandler);
+  }
 
-    LOG.info("Running maven from dir {} with goals {} and args {}", request.getBaseDirectory(), request.getGoals(), request.getArgs());
+  /**
+   * Run maven with the given arguments (targets) on the given pom file using per-invocation options.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+   * @param javaHome the Java home to use for this invocation, or null to use the default
+   * @param options invocation options controlling wrapper/home/default selection
+   * @param consoleOutputHandler where normal maven output will be sent, defaults to System.out
+   * @param warningOutputHandler where maven warning outputs will be sent, defaults to System.err
+   * @return InvocationResult the result of running the targets
+   * @throws MavenInvocationException if there is a problem with parsing or running maven
+   */
+  public static InvocationResult runMaven(final File pomFile, String[] mvnArgs,
+                                          @Nullable File javaHome,
+                                          @Nullable MavenExecutionOptions options,
+                                          @Nullable InvocationOutputHandler consoleOutputHandler,
+                                          @Nullable InvocationOutputHandler warningOutputHandler) throws MavenInvocationException {
+    return runMavenWithSelection(pomFile, mvnArgs, javaHome, options, consoleOutputHandler, warningOutputHandler)
+        .getInvocationResult();
+  }
+
+  /**
+   * Run maven and return both invocation result and selected maven distribution metadata.
+   */
+  public static MavenRunResult runMavenWithSelection(final File pomFile, String[] mvnArgs,
+                                                     @Nullable File javaHome,
+                                                     @Nullable MavenExecutionOptions options,
+                                                     @Nullable InvocationOutputHandler consoleOutputHandler,
+                                                     @Nullable InvocationOutputHandler warningOutputHandler)
+      throws MavenInvocationException {
+    InvocationRequest request = buildInvocationRequest(pomFile, mvnArgs, javaHome);
+    MavenDistributionSelection selection = selectMavenDistribution(pomFile, options);
+    LOG.info("Running maven from dir {} with goals {} and args {} using {} mode",
+        request.getBaseDirectory(), request.getGoals(), request.getArgs(), selection.getMode());
     Invoker invoker = new DefaultInvoker();
-    String mavenHome = locateMavenHome();
-    File mavenHomeDir = new File(mavenHome);
-    if (mavenHomeDir.exists()) {
-      LOG.debug("MAVEN_HOME used is {}", mavenHome);
-      invoker.setMavenHome(mavenHomeDir);
-    } else {
-      // Without maven home, only a small subset of maven commands will work
-      LOG.warn("No MAVEN_HOME set or set to an non existing maven home: {}, this might not go well...", mavenHome);
-    }
+    configureInvoker(invoker, selection);
     request.setOutputHandler(consoleOutputHandler == null ? new ConsoleInvocationOutputHandler() : consoleOutputHandler);
     request.setErrorHandler(warningOutputHandler == null ? new WarningInvocationOutputHandler() : warningOutputHandler);
-    return invoker.execute( request );
+    return new MavenRunResult(invoker.execute(request), selection);
   }
 
   /**
@@ -236,9 +393,19 @@ public class MavenUtils {
   public static int runMaven(final File pomFile, String[] mvnArgs, File javaHome,
                              @Nullable java.util.function.Consumer<String> outConsumer,
                              @Nullable java.util.function.Consumer<String> errConsumer) throws MavenInvocationException {
+    return runMaven(pomFile, mvnArgs, javaHome, null, outConsumer, errConsumer);
+  }
+
+  /**
+   * Run maven with the given arguments and option-based maven distribution selection.
+   */
+  public static int runMaven(final File pomFile, String[] mvnArgs, File javaHome,
+                             @Nullable MavenExecutionOptions options,
+                             @Nullable java.util.function.Consumer<String> outConsumer,
+                             @Nullable java.util.function.Consumer<String> errConsumer) throws MavenInvocationException {
     InvocationOutputHandler consoleHandler = outConsumer != null ? outConsumer::accept : null;
     InvocationOutputHandler errorHandler = errConsumer != null ? errConsumer::accept : null;
-    InvocationResult result = runMaven(pomFile, mvnArgs, javaHome, consoleHandler, errorHandler);
+    InvocationResult result = runMaven(pomFile, mvnArgs, javaHome, options, consoleHandler, errorHandler);
     return result.getExitCode();
   }
 
@@ -458,6 +625,88 @@ public class MavenUtils {
     }
   }
 
+  private static void configureInvoker(Invoker invoker, MavenDistributionSelection selection) {
+    if (selection.getMode() == MavenDistributionMode.WRAPPER) {
+      File wrapperExecutable = selection.getMavenExecutable();
+      if (wrapperExecutable != null && wrapperExecutable.isFile()) {
+        LOG.debug("Using Maven wrapper executable {}", wrapperExecutable.getAbsolutePath());
+        invoker.setMavenExecutable(wrapperExecutable);
+      } else {
+        LOG.warn("Wrapper mode selected but wrapper executable is missing: {}", wrapperExecutable);
+      }
+      return;
+    }
+    File mavenHome = selection.getMavenHome();
+    if (mavenHome != null && mavenHome.exists()) {
+      LOG.debug("MAVEN_HOME used is {}", mavenHome.getAbsolutePath());
+      invoker.setMavenHome(mavenHome);
+    } else {
+      // Without maven home, only a small subset of maven commands will work
+      LOG.warn("No MAVEN_HOME set or set to a non-existing maven home: {}, this might not go well...", mavenHome);
+    }
+  }
+
+  static MavenDistributionSelection selectMavenDistribution(@Nullable File pomFile, @Nullable MavenExecutionOptions options) {
+    MavenExecutionOptions effectiveOptions = options == null ? new MavenExecutionOptions() : options;
+    File projectDir = effectiveOptions.getProjectDir();
+    if (projectDir == null && pomFile != null) {
+      projectDir = pomFile.getParentFile();
+    }
+    if (effectiveOptions.isPreferWrapper()) {
+      File wrapperExecutable = findWrapperExecutable(projectDir);
+      if (wrapperExecutable != null) {
+        return new MavenDistributionSelection(MavenDistributionMode.WRAPPER, projectDir, wrapperExecutable, null);
+      }
+    }
+    File configuredMavenHome = effectiveOptions.getConfiguredMavenHome();
+    if (configuredMavenHome != null) {
+      return new MavenDistributionSelection(MavenDistributionMode.HOME, projectDir, null, configuredMavenHome);
+    }
+    String locatedMavenHome = locateMavenHome();
+    File defaultMavenHome = locatedMavenHome == null || locatedMavenHome.isBlank() ? null : new File(locatedMavenHome);
+    return new MavenDistributionSelection(MavenDistributionMode.DEFAULT, projectDir, null, defaultMavenHome);
+  }
+
+  @Nullable
+  static File findWrapperExecutable(@Nullable File projectDir) {
+    if (projectDir == null || !projectDir.isDirectory()) {
+      return null;
+    }
+    File wrapperProperties = new File(projectDir, WRAPPER_PROPERTIES);
+    if (!wrapperProperties.isFile()) {
+      return null;
+    }
+    File unixWrapper = new File(projectDir, WRAPPER_UNIX);
+    File windowsWrapper = new File(projectDir, WRAPPER_WINDOWS);
+    if (!unixWrapper.isFile() && !windowsWrapper.isFile()) {
+      return null;
+    }
+    if (isWindows()) {
+      return windowsWrapper.isFile() ? windowsWrapper : unixWrapper;
+    }
+    return unixWrapper.isFile() ? unixWrapper : windowsWrapper;
+  }
+
+  @Nullable
+  private static File resolveMavenHomeForSettings(MavenDistributionSelection selection) {
+    if (selection.getMode() == MavenDistributionMode.WRAPPER) {
+      File wrapperExecutable = selection.getMavenExecutable();
+      if (wrapperExecutable == null) {
+        return null;
+      }
+      String wrapperMavenHome = resolveMavenHomeFromExecutable(wrapperExecutable);
+      if (wrapperMavenHome == null || wrapperMavenHome.isBlank()) {
+        return null;
+      }
+      return new File(wrapperMavenHome);
+    }
+    return selection.getMavenHome();
+  }
+
+  private static boolean isWindows() {
+    return System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
+  }
+
   /**
    * Locates the MAVEN_HOME either from system property or environment variable.
    * If not found it will try to locate it from the PATH environment variable.
@@ -543,10 +792,37 @@ public class MavenUtils {
    */
   public Set<File> resolveDependencies(File pomFile, boolean... includeTestScope) throws SettingsBuildingException, ModelBuildingException,
       DependenciesResolveException {
+    return resolveDependencies(pomFile, null, includeTestScope);
+  }
+
+  /**
+   * Resolve dependencies for the given pom file using per-invocation options.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param options invocation options controlling wrapper/home/default selection
+   * @param includeTestScope if true test scope dependencies will be included
+   * @return a Set of Files representing the resolved dependencies
+   * @throws SettingsBuildingException if there was some issue with building the maven settings context
+   * @throws ModelBuildingException if there was some issue with the pom file
+   * @throws DependenciesResolveException if there was some issue resolving dependencies
+   */
+  public Set<File> resolveDependencies(File pomFile, @Nullable MavenExecutionOptions options, boolean... includeTestScope)
+      throws SettingsBuildingException, ModelBuildingException, DependenciesResolveException {
+    return resolveDependenciesWithSelection(pomFile, options, includeTestScope).getDependencies();
+  }
+
+  /**
+   * Resolve dependencies and return both resolved artifacts and selected maven distribution metadata.
+   */
+  public DependenciesResolutionResult resolveDependenciesWithSelection(File pomFile, @Nullable MavenExecutionOptions options,
+                                                                      boolean... includeTestScope)
+      throws SettingsBuildingException, ModelBuildingException, DependenciesResolveException {
+    MavenDistributionSelection selection = selectMavenDistribution(pomFile, options);
+    File mavenHomeForSettings = resolveMavenHomeForSettings(selection);
     RepositorySystem repositorySystem = getRepositorySystem();
-    RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem);
+    RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem, mavenHomeForSettings);
     boolean testScope = includeTestScope.length > 0 && includeTestScope[0];
-    Model model = parsePom(pomFile);
+    Model model = parsePom(pomFile, mavenHomeForSettings);
     List<RemoteRepository> repositories = getRepositories(model);
     Set<File> dependencies = new HashSet<>();
     LOG.trace("Maven model resolved: {}, parsing its dependencies...", model);
@@ -582,7 +858,7 @@ public class MavenUtils {
         }
       }
     }
-    return dependencies;
+    return new DependenciesResolutionResult(dependencies, selection);
   }
 
   /**
@@ -603,10 +879,14 @@ public class MavenUtils {
    * @throws ModelBuildingException if there was some issue with the pom file
    */
   public Model parsePom(File pomFile) throws SettingsBuildingException, ModelBuildingException {
+    return parsePom(pomFile, null);
+  }
+
+  private Model parsePom(File pomFile, @Nullable File mavenHome) throws SettingsBuildingException, ModelBuildingException {
     final DefaultModelBuildingRequest modelBuildingRequest = new DefaultModelBuildingRequest()
        .setPomFile(pomFile);
     RepositorySystem repositorySystem = getRepositorySystem();
-    RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem);
+    RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem, mavenHome);
     modelBuildingRequest.setModelResolver(new ModelResolver(
         remoteRepositories,
         repositorySystemSession,
@@ -696,8 +976,12 @@ public class MavenUtils {
   }
 
   static DefaultRepositorySystemSession getRepositorySystemSession(RepositorySystem system) throws SettingsBuildingException {
+    return getRepositorySystemSession(system, null);
+  }
+
+  static DefaultRepositorySystemSession getRepositorySystemSession(RepositorySystem system, @Nullable File mavenHome) throws SettingsBuildingException {
     DefaultRepositorySystemSession repositorySystemSession = MavenRepositorySystemUtils.newSession();
-    LocalRepository localRepository = getLocalRepository();
+    LocalRepository localRepository = getLocalRepository(mavenHome);
     repositorySystemSession.setLocalRepositoryManager(
        system.newLocalRepositoryManager(repositorySystemSession, localRepository));
 
@@ -712,7 +996,11 @@ public class MavenUtils {
    * @throws SettingsBuildingException if there was some issue with building the maven settings context
    */
   public static LocalRepository getLocalRepository() throws SettingsBuildingException {
-    Settings settings = getSettings();
+    return getLocalRepository(null);
+  }
+
+  static LocalRepository getLocalRepository(@Nullable File mavenHome) throws SettingsBuildingException {
+    Settings settings = getSettings(mavenHome);
     String localRepoPath = settings.getLocalRepository();
 
     if (localRepoPath != null) {
@@ -724,6 +1012,10 @@ public class MavenUtils {
   }
 
   private static Settings getSettings() throws SettingsBuildingException {
+    return getSettings(null);
+  }
+
+  private static Settings getSettings(@Nullable File mavenHome) throws SettingsBuildingException {
     DefaultSettingsReader settingsReader = new DefaultSettingsReader();
     DefaultSettingsWriter settingsWriter = new DefaultSettingsWriter();
     DefaultSettingsValidator settingsValidator = new DefaultSettingsValidator();
@@ -735,9 +1027,15 @@ public class MavenUtils {
     } else {
       LOG.warn("Did not find a settings.xml in {}", userSettingsFile.getAbsolutePath() );
     }
-    String m2Home = System.getenv("M2_HOME") != null ? System.getenv("M2_HOME") : System.getenv("MAVEN_HOME");
-    if (m2Home != null) {
-      File globalSettingsFile = new File(m2Home, "conf/settings.xml");
+    File effectiveMavenHome = mavenHome;
+    if (effectiveMavenHome == null) {
+      String m2Home = System.getenv("M2_HOME") != null ? System.getenv("M2_HOME") : System.getenv("MAVEN_HOME");
+      if (m2Home != null && !m2Home.isBlank()) {
+        effectiveMavenHome = new File(m2Home);
+      }
+    }
+    if (effectiveMavenHome != null) {
+      File globalSettingsFile = new File(effectiveMavenHome, "conf/settings.xml");
       if (globalSettingsFile.exists()) {
         request.setGlobalSettingsFile(globalSettingsFile);
       }

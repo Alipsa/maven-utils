@@ -1,5 +1,11 @@
 # maven-utils
 
+The maven-utils artifact is based on the latest maven 3 release. As such is "should" work together with older distributions of maven. However, to ensure compatibility with older maven versions, separate artifacts are published for maven 3.9.11, 3.9.4, 3.8.4 and 3.3.9. Once a new maven version is released, a new artifact will be published for that version and the maven-utils artifact will be updated to use the latest maven version. The maven-utils artifact will always use the latest maven version and should be used if you want to use the latest features of maven. The other artifacts should be used if you want to ensure compatibility with a particular older maven version.
+
+maven-utils:
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-utils)
+[![javadoc](https://javadoc.io/badge2/se.alipsa/maven-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-utils)
+
 maven-3.9.11-utils:
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.11-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.11-utils)
 [![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.9.11-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.9.11-utils)
@@ -22,8 +28,8 @@ Use it by adding the dependency to your maven pom, e.g:
 ```xml
 <dependency>
     <groupId>se.alipsa</groupId>
-    <artifactId>maven-3.9.11-utils</artifactId>
-    <version>1.2.0</version>
+    <artifactId>maven-utils</artifactId>
+    <version>1.3.0</version>
 </dependency>
 ```
 
@@ -32,7 +38,7 @@ Use it by adding the dependency to your maven pom, e.g:
 ### Running a maven goal
 ```groovy
 import org.apache.maven.shared.invoker.InvocationResult;
-import se.alipsa.maven.MavenUtils;
+import se.alipsa.mavenutils.MavenUtils;
 
 File pomFile = new File("pom.xml");
 InvocationResult result = MavenUtils.runMaven(pomFile, new String[]{"clean", "install"}, null, null);
@@ -49,13 +55,54 @@ The arguments to `runMaven(final File pomFile, String[] mvnArgs,
 - InvocationResult the result of running the targets
 - MavenInvocationException if there is a problem with parsing or running maven
 
-Note that maven need to be installed locally for the maven invoker which is used to run maven to work. MavenUtils will first 
-look for the MAVEN_HOME system property, then for the MAVEN_HOME environment variable and if still not found will try to locate
+### Maven distribution selection (runMaven and resolveDependencies)
+
+MavenUtils now supports deterministic maven distribution selection with modes:
+- WRAPPER
+- HOME
+- DEFAULT
+
+Default precedence is:
+- WRAPPER (`mvnw` on Unix, `mvnw.cmd` on Windows, and `.mvn/wrapper/maven-wrapper.properties` present)
+- configured Maven home (when provided through options)
+- DEFAULT (`locateMavenHome()`)
+
+Existing APIs remain backwards compatible but are now wrapper-preferred by default.
+
+Use `MavenExecutionOptions` to control behavior per call:
+```groovy
+import se.alipsa.mavenutils.MavenUtils;
+
+File pomFile = new File("pom.xml");
+MavenUtils.MavenExecutionOptions options = new MavenUtils.MavenExecutionOptions(
+    pomFile.getParentFile(),   // projectDir (optional)
+    null,                      // configuredMavenHome (optional)
+    true                       // preferWrapper
+);
+```
+
+To get selection metadata for logging/debugging:
+```groovy
+import se.alipsa.mavenutils.MavenUtils;
+
+MavenUtils.MavenRunResult runResult = MavenUtils.runMavenWithSelection(
+    pomFile,
+    new String[]{"validate"},
+    null,
+    options,
+    null,
+    null
+);
+println("Maven mode used: " + runResult.getDistributionSelection().getMode());
+```
+
+Note that maven need to be installed locally for DEFAULT mode to work. MavenUtils will first
+look for the MAVEN_HOME system property, then the MAVEN_HOME environment variable and if still not found will try to locate
 the mvn command in the PATH.
 
 The static method locateMavenHome is used to find maven home.
 ```groovy
-import se.alipsa.maven.MavenUtils;
+import se.alipsa.mavenutils.MavenUtils;
 
 String mavenHome = MavenUtils.locateMavenHome();
 ```
@@ -63,7 +110,7 @@ String mavenHome = MavenUtils.locateMavenHome();
 
 Get the local repository
 ```groovy
-import se.alipsa.maven.MavenUtils;
+import se.alipsa.mavenutils.MavenUtils;
 import org.eclipse.aether.repository.LocalRepository;
 
 LocalRepository localRepository = MavenUtils.getLocalRepository();
@@ -79,7 +126,7 @@ you get the Maven Central repository.
 ```groovy
 import java.io.File;
 import org.apache.maven.model.Model;
-import se.alipsa.maven.MavenUtils;
+import se.alipsa.mavenutils.MavenUtils;
 
 File pomFile = new File("pom.xml");
 MavenUtils mavenUtils = new MavenUtils();
@@ -90,7 +137,7 @@ Model model = mavenUtils.parsePom(pomFile);
 
 ```groovy
 import java.io.File;
-import se.alipsa.maven.MavenUtils;
+import se.alipsa.mavenutils.MavenUtils;
 
 File pomFile = new File("pom.xml");
 MavenUtils mavenUtils = new MavenUtils();
@@ -103,16 +150,24 @@ The method is defined as `getMavenDependenciesClassloader(File pomFile, @Nullabl
 ```groovy
 import java.util.Set;
 import java.io.File;
-import se.alipsa.maven.MavenUtils;
+import se.alipsa.mavenutils.MavenUtils;
 
 File pomFile = new File("pom.xml");
 MavenUtils mavenUtils = new MavenUtils();
 Set<File> dependencies = mavenUtils.resolveDependencies(pomFile);
 ```
 
+To get dependency resolution metadata:
+```groovy
+MavenUtils.DependenciesResolutionResult resolveResult =
+    mavenUtils.resolveDependenciesWithSelection(pomFile, options);
+println("Maven mode used: " + resolveResult.getDistributionSelection().getMode());
+Set<File> dependencies = resolveResult.getDependencies();
+```
+
 ### Fetch (resolve) a single artifact
 ```groovy
-import se.alipsa.maven.MavenUtils;
+import se.alipsa.mavenutils.MavenUtils;
 import java.io.File;
 
 MavenUtils mavenUtils = new MavenUtils();

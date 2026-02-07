@@ -11,4 +11,31 @@
     <ignoreVersion type="regex">.*jre7</ignoreVersion>
     <ignoreVersion type="regex">.*jre6</ignoreVersion>
   </ignoreVersions>
+  <rules>
+    <rule groupId="org.apache.maven" artifactId="maven-core">
+      <ignoreVersions>
+        <ignoreVersion type="regex">^[4-9][0-9]*(\..*)?$</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+    <rule groupId="org.apache.maven.resolver" artifactId="maven-resolver-connector-basic">
+      <ignoreVersions>
+        <ignoreVersion type="regex">^[2-9][0-9]*(\..*)?$</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+    <rule groupId="org.apache.maven.resolver" artifactId="maven-resolver-transport-file">
+      <ignoreVersions>
+        <ignoreVersion type="regex">^[2-9][0-9]*(\..*)?$</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+    <rule groupId="org.apache.maven.resolver" artifactId="maven-resolver-transport-http">
+      <ignoreVersions>
+        <ignoreVersion type="regex">^[2-9][0-9]*(\..*)?$</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+    <rule groupId="org.apache.maven.resolver" artifactId="maven-resolver-supplier">
+      <ignoreVersions>
+        <ignoreVersion type="regex">^[2-9][0-9]*(\..*)?$</ignoreVersion>
+      </ignoreVersions>
+    </rule>
+  </rules>
 </ruleset>

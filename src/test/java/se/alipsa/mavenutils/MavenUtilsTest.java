@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
@@ -157,6 +158,85 @@ public class MavenUtilsTest {
   }
 
   @Test
+  public void wrapperBeatsConfiguredHome() throws IOException {
+    File projectDir = Files.createTempDirectory("wrapper-wins").toFile();
+    createMinimalPom(projectDir);
+    createWrapper(projectDir, new File(projectDir, "fake-wrapper-home").getAbsolutePath(), 0);
+    File configuredHome = Files.createTempDirectory("configured-home").toFile();
+    MavenUtils.MavenExecutionOptions options = new MavenUtils.MavenExecutionOptions(projectDir, configuredHome, true);
+
+    MavenUtils.MavenDistributionSelection selection = MavenUtils.selectMavenDistribution(new File(projectDir, "pom.xml"), options);
+    assertEquals(MavenUtils.MavenDistributionMode.WRAPPER, selection.getMode());
+    assertNotNull(selection.getMavenExecutable());
+  }
+
+  @Test
+  public void configuredHomeUsedWhenNoWrapper() throws IOException {
+    File projectDir = Files.createTempDirectory("home-wins").toFile();
+    createMinimalPom(projectDir);
+    File configuredHome = Files.createTempDirectory("configured-home").toFile();
+    MavenUtils.MavenExecutionOptions options = new MavenUtils.MavenExecutionOptions(projectDir, configuredHome, true);
+
+    MavenUtils.MavenDistributionSelection selection = MavenUtils.selectMavenDistribution(new File(projectDir, "pom.xml"), options);
+    assertEquals(MavenUtils.MavenDistributionMode.HOME, selection.getMode());
+    assertEquals(configuredHome.getAbsolutePath(), selection.getMavenHome().getAbsolutePath());
+  }
+
+  @Test
+  public void defaultUsedWhenWrapperAndConfiguredHomeAreMissing() throws IOException {
+    File projectDir = Files.createTempDirectory("default-wins").toFile();
+    createMinimalPom(projectDir);
+    MavenUtils.MavenExecutionOptions options = new MavenUtils.MavenExecutionOptions(projectDir, null, true);
+
+    MavenUtils.MavenDistributionSelection selection = MavenUtils.selectMavenDistribution(new File(projectDir, "pom.xml"), options);
+    assertEquals(MavenUtils.MavenDistributionMode.DEFAULT, selection.getMode());
+  }
+
+  @Test
+  public void runMavenAndResolveDependenciesUseSamePrecedence() throws Exception {
+    File projectDir = Files.createTempDirectory("wrapper-precedence").toFile();
+    File pomFile = createMinimalPom(projectDir);
+    createWrapper(projectDir, new File(projectDir, "fake-wrapper-home").getAbsolutePath(), 0);
+    File configuredHome = Files.createTempDirectory("configured-home").toFile();
+    MavenUtils.MavenExecutionOptions options = new MavenUtils.MavenExecutionOptions(projectDir, configuredHome, true);
+
+    MavenUtils.MavenRunResult runResult = MavenUtils.runMavenWithSelection(
+        pomFile,
+        new String[]{"validate"},
+        null,
+        options,
+        line -> { },
+        line -> { }
+    );
+    assertEquals(0, runResult.getInvocationResult().getExitCode());
+    assertEquals(MavenUtils.MavenDistributionMode.WRAPPER, runResult.getDistributionSelection().getMode());
+
+    MavenUtils mavenUtils = new MavenUtils();
+    MavenUtils.DependenciesResolutionResult resolveResult = mavenUtils.resolveDependenciesWithSelection(pomFile, options);
+    assertEquals(MavenUtils.MavenDistributionMode.WRAPPER, resolveResult.getDistributionSelection().getMode());
+    assertNotNull(resolveResult.getDependencies());
+  }
+
+  @Test
+  public void wrapperDetectionSupportsUnixAndWindowsScripts() throws IOException {
+    File unixProjectDir = Files.createTempDirectory("wrapper-unix").toFile();
+    Files.createDirectories(unixProjectDir.toPath().resolve(".mvn/wrapper"));
+    Files.writeString(unixProjectDir.toPath().resolve(".mvn/wrapper/maven-wrapper.properties"), "distributionUrl=https://example.invalid");
+    Path unixWrapper = unixProjectDir.toPath().resolve("mvnw");
+    Files.writeString(unixWrapper, "#!/usr/bin/env bash\nexit 0\n");
+    assertTrue(unixWrapper.toFile().setExecutable(true));
+
+    File windowsProjectDir = Files.createTempDirectory("wrapper-win").toFile();
+    Files.createDirectories(windowsProjectDir.toPath().resolve(".mvn/wrapper"));
+    Files.writeString(windowsProjectDir.toPath().resolve(".mvn/wrapper/maven-wrapper.properties"), "distributionUrl=https://example.invalid");
+    Path winWrapper = windowsProjectDir.toPath().resolve("mvnw.cmd");
+    Files.writeString(winWrapper, "@echo off\r\nexit /b 0\r\n");
+
+    assertNotNull(MavenUtils.findWrapperExecutable(unixProjectDir));
+    assertNotNull(MavenUtils.findWrapperExecutable(windowsProjectDir));
+  }
+
+  @Test
   public void getClassloader() throws Exception {
     File pomFile = Paths.get(getClass().getResource("/pom/simple.xml").toURI()).toFile();
     MavenUtils mavenUtils = new MavenUtils();
@@ -249,4 +329,43 @@ public class MavenUtilsTest {
   }
 
    */
+
+  private static File createMinimalPom(File projectDir) throws IOException {
+    File pomFile = new File(projectDir, "pom.xml");
+    Files.writeString(
+        pomFile.toPath(),
+        "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n"
+            + "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+            + "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n"
+            + "  <modelVersion>4.0.0</modelVersion>\n"
+            + "  <groupId>se.alipsa</groupId>\n"
+            + "  <artifactId>temp-project</artifactId>\n"
+            + "  <version>1.0.0</version>\n"
+            + "</project>\n"
+    );
+    return pomFile;
+  }
+
+  private static void createWrapper(File projectDir, String mavenHomeOutput, int exitCode) throws IOException {
+    Path wrapperConfigDir = projectDir.toPath().resolve(".mvn/wrapper");
+    Files.createDirectories(wrapperConfigDir);
+    Files.writeString(wrapperConfigDir.resolve("maven-wrapper.properties"), "distributionUrl=https://example.invalid");
+
+    Path unixWrapper = projectDir.toPath().resolve("mvnw");
+    Files.writeString(
+        unixWrapper,
+        "#!/usr/bin/env bash\n"
+            + "echo \"" + mavenHomeOutput + "\"\n"
+            + "exit " + exitCode + "\n"
+    );
+    assertTrue(unixWrapper.toFile().setExecutable(true));
+
+    Path windowsWrapper = projectDir.toPath().resolve("mvnw.cmd");
+    Files.writeString(
+        windowsWrapper,
+        "@echo off\r\n"
+            + "echo " + mavenHomeOutput + "\r\n"
+            + "exit /b " + exitCode + "\r\n"
+    );
+  }
 }
