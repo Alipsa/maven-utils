@@ -2,7 +2,11 @@ package se.alipsa.mavenutils;
 
 import static se.alipsa.mavenutils.EnvUtils.getUserHome;
 
+import org.eclipse.aether.collection.CollectRequest;
+import org.eclipse.aether.graph.Exclusion;
 import org.eclipse.aether.resolution.*;
+import org.eclipse.aether.util.artifact.JavaScopes;
+import org.eclipse.aether.util.filter.DependencyFilterUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.maven.model.Model;
@@ -21,18 +25,13 @@ import org.apache.maven.settings.io.DefaultSettingsWriter;
 import org.apache.maven.settings.validation.DefaultSettingsValidator;
 import org.apache.maven.shared.invoker.*;
 import org.eclipse.aether.DefaultRepositorySystemSession;
-import org.eclipse.aether.supplier.RepositorySystemSupplier;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
-import org.eclipse.aether.collection.CollectRequest;
-import org.eclipse.aether.graph.Dependency;
 import org.eclipse.aether.graph.DependencyFilter;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.RemoteRepository;
-import org.eclipse.aether.util.artifact.JavaScopes;
-import org.eclipse.aether.util.filter.DependencyFilterUtils;
 
 import javax.annotation.Nullable;
 import java.io.BufferedReader;
@@ -813,51 +812,74 @@ public class MavenUtils {
 
   /**
    * Resolve dependencies and return both resolved artifacts and selected maven distribution metadata.
+   * <p>
+   * Uses the Aether {@link org.eclipse.aether.collection.CollectRequest} /
+   * {@link org.eclipse.aether.resolution.DependencyRequest} API with a
+   * {@link BomAwareRepositorySystemSupplier}-backed {@link RepositorySystem} to resolve the
+   * full transitive dependency graph. The effective POM model is obtained via {@link #parsePom(File)}
+   * which handles property interpolation, parent inheritance, and BOM resolution.
+   * </p>
    */
   public DependenciesResolutionResult resolveDependenciesWithSelection(File pomFile, @Nullable MavenExecutionOptions options,
                                                                       boolean... includeTestScope)
       throws SettingsBuildingException, ModelBuildingException, DependenciesResolveException {
-    MavenDistributionSelection selection = selectMavenDistribution(pomFile, options);
-    File mavenHomeForSettings = resolveMavenHomeForSettings(selection);
-    RepositorySystem repositorySystem = getRepositorySystem();
-    RepositorySystemSession repositorySystemSession = getRepositorySystemSession(repositorySystem, mavenHomeForSettings);
     boolean testScope = includeTestScope.length > 0 && includeTestScope[0];
-    Model model = parsePom(pomFile, mavenHomeForSettings);
-    List<RemoteRepository> repositories = getRepositories(model);
-    Set<File> dependencies = new HashSet<>();
-    LOG.trace("Maven model resolved: {}, parsing its dependencies...", model);
-    List<String> includeScopes = new ArrayList<>();
-    includeScopes.add(JavaScopes.COMPILE);
-    includeScopes.add(JavaScopes.RUNTIME);
-    if (testScope) {
-      includeScopes.add(JavaScopes.TEST);
-    }
-    for (org.apache.maven.model.Dependency d : model.getDependencies()) {
-      LOG.trace("processing dependency: {}", d);
-      Artifact artifact = new DefaultArtifact(d.getGroupId(), d.getArtifactId(), d.getType(), d.getVersion());
+    File mavenHome = options != null ? options.getConfiguredMavenHome() : null;
 
-      if (includeScopes.contains(d.getScope())) {
-        ///// Resolve main + transient
-        LOG.info("resolving {}:{}:{}:{}...", artifact.getGroupId(), artifact.getArtifactId(), artifact.getVersion(), d.getType() );
-        CollectRequest collectRequest = new CollectRequest(new Dependency(artifact, JavaScopes.RUNTIME), repositories);
-        DependencyFilter filter = DependencyFilterUtils.classpathFilter(includeScopes);
-        DependencyRequest request = new DependencyRequest(collectRequest, filter);
+    Model model = parsePom(pomFile, mavenHome);
 
-        DependencyResult result;
-        try {
-          result = repositorySystem.resolveDependencies(repositorySystemSession, request);
-        } catch (DependencyResolutionException | RuntimeException e) {
-          LOG.warn("Error resolving dependent artifact: {}:{}:{}", d.getGroupId(), d.getArtifactId(), d.getVersion(), e);
-          throw new DependenciesResolveException("Error resolving dependent artifact: " + d.getGroupId() + ":" + d.getArtifactId() + ":" + d.getVersion(), e);
-        }
+    RepositorySystem repositorySystem = getRepositorySystem();
+    DefaultRepositorySystemSession session = getRepositorySystemSession(repositorySystem, mavenHome);
 
-        for (ArtifactResult artifactResult : result.getArtifactResults()) {
-          Artifact art = artifactResult.getArtifact();
-          LOG.debug("artifact {} resolved to {}", art, art.getFile());
-          dependencies.add(art.getFile());
-        }
+    // Collect remote repositories from both this instance and the POM model
+    List<RemoteRepository> repos = new ArrayList<>(remoteRepositories);
+    for (RemoteRepository modelRepo : getRepositories(model)) {
+      if (repos.stream().noneMatch(r -> r.getId().equals(modelRepo.getId()))) {
+        repos.add(modelRepo);
       }
     }
+
+    CollectRequest collectRequest = new CollectRequest();
+    collectRequest.setRepositories(repos);
+
+    for (org.apache.maven.model.Dependency dep : model.getDependencies()) {
+      String scope = dep.getScope() == null ? JavaScopes.COMPILE : dep.getScope();
+      org.eclipse.aether.graph.Dependency aetherDep = new org.eclipse.aether.graph.Dependency(
+          new DefaultArtifact(dep.getGroupId(), dep.getArtifactId(),
+              dep.getClassifier(), dep.getType() == null ? "jar" : dep.getType(), dep.getVersion()),
+          scope
+      );
+
+      // Apply exclusions from the model
+      if (dep.getExclusions() != null && !dep.getExclusions().isEmpty()) {
+        Collection<Exclusion> exclusions = new ArrayList<>();
+        for (org.apache.maven.model.Exclusion excl : dep.getExclusions()) {
+          exclusions.add(new Exclusion(excl.getGroupId(), excl.getArtifactId(), "*", "*"));
+        }
+        aetherDep = aetherDep.setExclusions(exclusions);
+      }
+
+      collectRequest.addDependency(aetherDep);
+    }
+
+    String filterScope = testScope ? JavaScopes.TEST : JavaScopes.RUNTIME;
+    DependencyFilter classpathFilter = DependencyFilterUtils.classpathFilter(filterScope);
+    DependencyRequest dependencyRequest = new DependencyRequest(collectRequest, classpathFilter);
+
+    Set<File> dependencies = new LinkedHashSet<>();
+    try {
+      DependencyResult result = repositorySystem.resolveDependencies(session, dependencyRequest);
+      for (ArtifactResult artifactResult : result.getArtifactResults()) {
+        Artifact artifact = artifactResult.getArtifact();
+        if (artifact != null && artifact.getFile() != null) {
+          dependencies.add(artifact.getFile());
+        }
+      }
+    } catch (org.eclipse.aether.resolution.DependencyResolutionException e) {
+      throw new DependenciesResolveException("Failed to resolve dependencies for " + pomFile, e);
+    }
+
+    MavenDistributionSelection selection = selectMavenDistribution(pomFile, options);
     return new DependenciesResolutionResult(dependencies, selection);
   }
 
@@ -971,8 +993,7 @@ public class MavenUtils {
   }
 
   static RepositorySystem getRepositorySystem() {
-    // Use the modern RepositorySystemSupplier instead of deprecated DefaultServiceLocator
-    return new RepositorySystemSupplier().get();
+    return new BomAwareRepositorySystemSupplier().get();
   }
 
   static DefaultRepositorySystemSession getRepositorySystemSession(RepositorySystem system) throws SettingsBuildingException {
@@ -986,6 +1007,10 @@ public class MavenUtils {
        system.newLocalRepositoryManager(repositorySystemSession, localRepository));
 
     repositorySystemSession.setRepositoryListener(new ConsoleRepositoryEventListener());
+
+    // Propagate JVM system properties so that profile activation (e.g. jdk9+) and
+    // property interpolation work correctly in the ArtifactDescriptorReader's ModelBuilder
+    repositorySystemSession.setSystemProperties(System.getProperties());
 
     return repositorySystemSession;
   }
