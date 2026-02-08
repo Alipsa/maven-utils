@@ -2,7 +2,7 @@
 
 ## Version history
 
-### 1.3.1, in progress
+### 1.3.1, Feb 8, 2026
 - Fixed `resolveDependencies()` producing duplicate dependencies of different versions.
   The previous implementation resolved each direct dependency independently, bypassing
   Maven's nearest-wins mediation. Dependencies are now resolved as a single graph, so
