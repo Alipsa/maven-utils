@@ -218,7 +218,7 @@ Used to resolve dependencies. License: EPL 1.0
 Used to resolve dependencies. License: EPL 1.0
 
 ### org.junit.jupiter:junit-jupiter
-User for unit testing. Licence: EPL 2.0
+Used for unit testing. Licence: EPL 2.0
 
 ### org.slf4j:slf4j-simple
-User for unit testing. Licence: MIT
+Used for unit testing. Licence: MIT
