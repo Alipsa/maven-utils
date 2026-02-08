@@ -824,7 +824,8 @@ public class MavenUtils {
                                                                       boolean... includeTestScope)
       throws SettingsBuildingException, ModelBuildingException, DependenciesResolveException {
     boolean testScope = includeTestScope.length > 0 && includeTestScope[0];
-    File mavenHome = options != null ? options.getConfiguredMavenHome() : null;
+    MavenDistributionSelection selection = selectMavenDistribution(pomFile, options);
+    File mavenHome = resolveMavenHomeForSettings(selection);
 
     Model model = parsePom(pomFile, mavenHome);
 
@@ -879,7 +880,6 @@ public class MavenUtils {
       throw new DependenciesResolveException("Failed to resolve dependencies for " + pomFile, e);
     }
 
-    MavenDistributionSelection selection = selectMavenDistribution(pomFile, options);
     return new DependenciesResolutionResult(dependencies, selection);
   }
 

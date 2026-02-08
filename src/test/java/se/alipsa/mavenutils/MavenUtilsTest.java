@@ -12,20 +12,23 @@ import org.apache.maven.shared.invoker.MavenInvocationException;
 import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.resolution.ArtifactResolutionException;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.OutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
+import java.util.jar.JarOutputStream;
 import java.util.stream.Collectors;
 
 public class MavenUtilsTest {
@@ -33,25 +36,23 @@ public class MavenUtilsTest {
   private static final Logger LOG = LoggerFactory.getLogger(MavenUtilsTest.class);
 
   @Test
-  public void testDownloadArtifact() throws SettingsBuildingException, ArtifactResolutionException {
-    MavenUtils mavenUtils = new MavenUtils();
-    File localRepo = MavenUtils.getLocalRepository().getBasedir();
-    assertNotNull(localRepo);
-    File artifactDir = new File(localRepo, "org/slf4j/slf4j-api/1.7.32");
-    if (artifactDir.exists()) {
-      LOG.info("Deleting files in {} to ensure remote download works", artifactDir.getAbsolutePath());
-      for (File file : Objects.requireNonNull(artifactDir.listFiles())) {
-        if ("slf4j-api-1.7.32.jar".equals(file.getName()) || "slf4j-api-1.7.32.jar.sha1".equals(file.getName())) {
-          LOG.info("Deleting {}", file.getName());
-          assertTrue(file.delete(), "Failed to delete " + file.getAbsolutePath());
-        }
-      }
-    } else {
-      LOG.info("{} does not exist: no problem, we are going to fetch it!", artifactDir.getAbsolutePath());
+  public void testDownloadArtifact() throws Exception {
+    try (SystemPropertyOverride ignored = overrideSystemProperty("user.home", Files.createTempDirectory("fake-user-home").toString())) {
+      File localRepo = Files.createTempDirectory("isolated-local-repo").toFile();
+      createUserSettingsWithLocalRepo(new File(System.getProperty("user.home")), localRepo);
+
+      File remoteRepoRoot = Files.createTempDirectory("release-remote-repo").toFile();
+      createArtifactInFileRepo(remoteRepoRoot, "org.slf4j", "slf4j-api", "1.7.32");
+
+      MavenUtils mavenUtils = new MavenUtils(List.of());
+      mavenUtils.addRemoteRepository("release-repo", remoteRepoRoot.toURI().toString());
+
+      File file = mavenUtils.resolveArtifact("org.slf4j", "slf4j-api", null, "jar", "1.7.32");
+      assertTrue(file.exists(), "File does not exist");
+      assertEquals("slf4j-api-1.7.32.jar", file.getName(), "File name is wrong");
+      assertTrue(file.getAbsolutePath().startsWith(localRepo.getAbsolutePath()),
+          "Artifact should be resolved to isolated local repo but was " + file.getAbsolutePath());
     }
-    File file = mavenUtils.resolveArtifact("org.slf4j", "slf4j-api", null, "jar", "1.7.32");
-    assertTrue(file.exists(), "File does not exist");
-    assertEquals("slf4j-api-1.7.32.jar", file.getName(), "File name is wrong");
   }
 
   @Test
@@ -218,6 +219,52 @@ public class MavenUtilsTest {
   }
 
   @Test
+  public void resolveDependenciesWithSelectionUsesWrapperMavenHomeForSettings() throws Exception {
+    String originalUserHome = System.getProperty("user.home");
+    File fakeUserHome = Files.createTempDirectory("fake-user-home").toFile();
+    System.setProperty("user.home", fakeUserHome.getAbsolutePath());
+    try {
+      File projectDir = Files.createTempDirectory("wrapper-settings").toFile();
+      File pomFile = new File(projectDir, "pom.xml");
+
+      String groupId = "com.example";
+      String artifactId = "demo-artifact";
+      String version = "1.0.0";
+
+      File fileRepo = Files.createTempDirectory("file-repo").toFile();
+      createArtifactInFileRepo(fileRepo, groupId, artifactId, version);
+      createPomWithRepositoryAndDependency(pomFile, fileRepo, groupId, artifactId, version);
+
+      File configuredLocalRepo = Files.createTempDirectory("configured-local-repo").toFile();
+      File wrapperLocalRepo = Files.createTempDirectory("wrapper-local-repo").toFile();
+      File configuredHome = createMavenHomeWithLocalRepo(configuredLocalRepo);
+      File wrapperHome = createMavenHomeWithLocalRepo(wrapperLocalRepo);
+      createWrapper(projectDir, wrapperHome.getAbsolutePath(), 0);
+
+      MavenUtils.MavenExecutionOptions options = new MavenUtils.MavenExecutionOptions(projectDir, configuredHome, true);
+
+      MavenUtils mavenUtils = new MavenUtils();
+      MavenUtils.DependenciesResolutionResult result = mavenUtils.resolveDependenciesWithSelection(pomFile, options);
+
+      assertEquals(MavenUtils.MavenDistributionMode.WRAPPER, result.getDistributionSelection().getMode());
+      assertEquals(1, result.getDependencies().size(), "Expected one resolved dependency");
+
+      File resolvedArtifact = result.getDependencies().iterator().next();
+      assertTrue(resolvedArtifact.exists(), "Resolved artifact does not exist");
+      assertTrue(resolvedArtifact.getAbsolutePath().startsWith(wrapperLocalRepo.getAbsolutePath()),
+          "Expected artifact in wrapper local repo but got " + resolvedArtifact.getAbsolutePath());
+      assertFalse(resolvedArtifact.getAbsolutePath().startsWith(configuredLocalRepo.getAbsolutePath()),
+          "Artifact should not be resolved in configured local repo");
+    } finally {
+      if (originalUserHome == null) {
+        System.clearProperty("user.home");
+      } else {
+        System.setProperty("user.home", originalUserHome);
+      }
+    }
+  }
+
+  @Test
   public void wrapperDetectionSupportsUnixAndWindowsScripts() throws IOException {
     File unixProjectDir = Files.createTempDirectory("wrapper-unix").toFile();
     Files.createDirectories(unixProjectDir.toPath().resolve(".mvn/wrapper"));
@@ -310,13 +357,98 @@ public class MavenUtilsTest {
 
   @Test
   public void testFetchArtifactFromSnapshot() throws Exception {
-    MavenUtils mavenUtils = new MavenUtils();
-    mavenUtils.addRemoteRepository(
-        "oss.sonatype.org-snapshot",
-        "https://oss.sonatype.org/content/repositories/snapshots"
-    );
-    File af = mavenUtils.resolveArtifact("se.alipsa", "gade-runner", "1.0.0-SNAPSHOT");
-    assertNotNull(af, "Artifact is null");
+    try (SystemPropertyOverride ignored = overrideSystemProperty("user.home", Files.createTempDirectory("fake-user-home").toString())) {
+      File localRepo = Files.createTempDirectory("isolated-local-repo").toFile();
+      createUserSettingsWithLocalRepo(new File(System.getProperty("user.home")), localRepo);
+
+      File remoteRepoRoot = Files.createTempDirectory("snapshot-remote-repo").toFile();
+      String groupId = "se.alipsa";
+      String artifactId = "gade-runner";
+      String version = "1.0.0-SNAPSHOT";
+      String timestamp = "20260208.194500";
+      String buildNumber = "1";
+      createSnapshotArtifactInRepository(remoteRepoRoot, groupId, artifactId, version, timestamp, buildNumber);
+
+      MavenUtils mavenUtils = new MavenUtils(List.of());
+      mavenUtils.addRemoteRepository("local-snapshots", remoteRepoRoot.toURI().toString());
+
+      File af = mavenUtils.resolveArtifact(groupId, artifactId, version);
+      assertNotNull(af, "Artifact is null");
+      assertTrue(af.exists(), "Resolved snapshot artifact must exist");
+      assertTrue(af.getName().startsWith("gade-runner-1.0.0-") && af.getName().endsWith(".jar"),
+          "Resolved snapshot artifact should be timestamped, got " + af.getName());
+      assertTrue(af.getAbsolutePath().startsWith(localRepo.getAbsolutePath()),
+          "Artifact should be resolved to isolated local repo but was " + af.getAbsolutePath());
+
+      Path resolverStatus = localRepo.toPath()
+          .resolve("se/alipsa/gade-runner/1.0.0-SNAPSHOT/resolver-status.properties");
+      assertTrue(Files.exists(resolverStatus),
+          "Snapshot resolution should write resolver-status.properties in isolated local repo");
+    }
+  }
+
+  /**
+   * Opt-in system integration test that verifies real artifact resolution from Maven Central.
+   * Enable with -Dmavenutils.runSystemIT=true
+   */
+  @Test
+  @EnabledIfSystemProperty(named = "mavenutils.runSystemIT", matches = "true")
+  public void systemIntegrationDownloadArtifactFromCentral() throws Exception {
+    try (SystemPropertyOverride ignored = overrideSystemProperty("user.home", Files.createTempDirectory("system-it-user-home").toString())) {
+      File localRepo = Files.createTempDirectory("system-it-local-repo").toFile();
+      createUserSettingsWithLocalRepo(new File(System.getProperty("user.home")), localRepo);
+
+      MavenUtils mavenUtils = new MavenUtils();
+      File file = mavenUtils.resolveArtifact("org.slf4j", "slf4j-api", null, "jar", "1.7.32");
+      assertNotNull(file, "Artifact file is null");
+      assertTrue(file.exists(), "Artifact file does not exist");
+      assertEquals("slf4j-api-1.7.32.jar", file.getName(), "Unexpected artifact filename");
+      assertTrue(file.getAbsolutePath().startsWith(localRepo.getAbsolutePath()),
+          "Artifact should resolve into isolated local repo but was " + file.getAbsolutePath());
+    }
+  }
+
+  /**
+   * Opt-in system integration test that verifies real release artifact resolution.
+   * Enable with -Dmavenutils.runSystemIT=true
+   */
+  @Test
+  @EnabledIfSystemProperty(named = "mavenutils.runSystemIT", matches = "true")
+  public void systemIntegrationFetchReleaseArtifact() throws Exception {
+    try (SystemPropertyOverride ignored = overrideSystemProperty("user.home", Files.createTempDirectory("system-it-user-home").toString())) {
+      File localRepo = Files.createTempDirectory("system-it-local-repo").toFile();
+      createUserSettingsWithLocalRepo(new File(System.getProperty("user.home")), localRepo);
+
+      String releaseRepoUrl = System.getProperty(
+          "mavenutils.systemIT.releaseRepoUrl",
+          "https://repo1.maven.org/maven2/"
+      );
+      String groupId = System.getProperty("mavenutils.systemIT.releaseGroupId", "se.alipsa");
+      String artifactId = System.getProperty("mavenutils.systemIT.releaseArtifactId", "maven-utils");
+      String version = System.getProperty("mavenutils.systemIT.releaseVersion", "1.3.0");
+
+      assertFalse(version.endsWith("-SNAPSHOT"),
+          "System IT release version must not be a SNAPSHOT, got " + version);
+
+      MavenUtils mavenUtils = new MavenUtils(List.of());
+      mavenUtils.addRemoteRepository("system-it-release", releaseRepoUrl);
+
+      try {
+        File af = mavenUtils.resolveArtifact(groupId, artifactId, version);
+        assertNotNull(af, "Artifact is null");
+        assertTrue(af.exists(), "Resolved release artifact must exist");
+        assertEquals(artifactId + "-" + version + ".jar", af.getName(),
+            "Resolved release artifact filename mismatch");
+        assertTrue(af.getAbsolutePath().startsWith(localRepo.getAbsolutePath()),
+            "Artifact should resolve into isolated local repo but was " + af.getAbsolutePath());
+      } catch (ArtifactResolutionException e) {
+        fail("Failed to resolve release artifact "
+                + groupId + ":" + artifactId + ":" + version
+                + " from repository " + releaseRepoUrl
+                + ". Override with -Dmavenutils.systemIT.releaseRepoUrl/groupId/artifactId/version. Cause: "
+                + e.getMessage());
+      }
+    }
   }
 
   /*
@@ -344,6 +476,212 @@ public class MavenUtilsTest {
             + "</project>\n"
     );
     return pomFile;
+  }
+
+  private static void createPomWithRepositoryAndDependency(File pomFile, File repoDir, String groupId, String artifactId, String version)
+      throws IOException {
+    Files.writeString(
+        pomFile.toPath(),
+        "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n"
+            + "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+            + "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n"
+            + "  <modelVersion>4.0.0</modelVersion>\n"
+            + "  <groupId>se.alipsa</groupId>\n"
+            + "  <artifactId>settings-precedence</artifactId>\n"
+            + "  <version>1.0.0</version>\n"
+            + "  <repositories>\n"
+            + "    <repository>\n"
+            + "      <id>test-file-repo</id>\n"
+            + "      <url>" + repoDir.toURI() + "</url>\n"
+            + "    </repository>\n"
+            + "  </repositories>\n"
+            + "  <dependencies>\n"
+            + "    <dependency>\n"
+            + "      <groupId>" + groupId + "</groupId>\n"
+            + "      <artifactId>" + artifactId + "</artifactId>\n"
+            + "      <version>" + version + "</version>\n"
+            + "    </dependency>\n"
+            + "  </dependencies>\n"
+            + "</project>\n"
+    );
+  }
+
+  private static void createArtifactInFileRepo(File repoDir, String groupId, String artifactId, String version) throws IOException {
+    Path artifactDir = repoDir.toPath()
+        .resolve(groupId.replace('.', File.separatorChar))
+        .resolve(artifactId)
+        .resolve(version);
+    Files.createDirectories(artifactDir);
+    Path pomPath = artifactDir.resolve(artifactId + "-" + version + ".pom");
+    Files.writeString(
+        pomPath,
+        "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n"
+            + "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+            + "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n"
+            + "  <modelVersion>4.0.0</modelVersion>\n"
+            + "  <groupId>" + groupId + "</groupId>\n"
+            + "  <artifactId>" + artifactId + "</artifactId>\n"
+            + "  <version>" + version + "</version>\n"
+            + "</project>\n"
+    );
+    Path jarPath = artifactDir.resolve(artifactId + "-" + version + ".jar");
+    try (OutputStream os = Files.newOutputStream(jarPath);
+         JarOutputStream ignored = new JarOutputStream(os)) {
+      // Empty jar content is enough for resolution.
+    }
+    writeSha1File(pomPath);
+    writeSha1File(jarPath);
+  }
+
+  private static File createMavenHomeWithLocalRepo(File localRepo) throws IOException {
+    File mavenHome = Files.createTempDirectory("maven-home").toFile();
+    Path confDir = mavenHome.toPath().resolve("conf");
+    Files.createDirectories(confDir);
+    Files.createDirectories(localRepo.toPath());
+    String localRepoPath = localRepo.getAbsolutePath().replace("\\", "/");
+    Files.writeString(
+        confDir.resolve("settings.xml"),
+        "<settings xmlns=\"http://maven.apache.org/SETTINGS/1.0.0\"\n"
+            + "          xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+            + "          xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd\">\n"
+            + "  <localRepository>" + localRepoPath + "</localRepository>\n"
+            + "</settings>\n"
+    );
+    return mavenHome;
+  }
+
+  private static void createUserSettingsWithLocalRepo(File userHome, File localRepo) throws IOException {
+    Path m2Dir = userHome.toPath().resolve(".m2");
+    Files.createDirectories(m2Dir);
+    Files.createDirectories(localRepo.toPath());
+    String localRepoPath = localRepo.getAbsolutePath().replace("\\", "/");
+    Files.writeString(
+        m2Dir.resolve("settings.xml"),
+        "<settings xmlns=\"http://maven.apache.org/SETTINGS/1.0.0\"\n"
+            + "          xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+            + "          xsi:schemaLocation=\"http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd\">\n"
+            + "  <localRepository>" + localRepoPath + "</localRepository>\n"
+            + "</settings>\n"
+    );
+  }
+
+  private static void createSnapshotArtifactInRepository(File repoRoot, String groupId, String artifactId, String version,
+                                                         String timestamp, String buildNumber) throws IOException {
+    String baseVersion = version.substring(0, version.length() - "-SNAPSHOT".length());
+    String resolvedVersion = baseVersion + "-" + timestamp + "-" + buildNumber;
+    String updated = timestamp.replace(".", "");
+
+    Path artifactRoot = repoRoot.toPath()
+        .resolve(groupId.replace('.', File.separatorChar))
+        .resolve(artifactId);
+    Path snapshotDir = artifactRoot.resolve(version);
+    Files.createDirectories(snapshotDir);
+
+    Path artifactMetadataPath = artifactRoot.resolve("maven-metadata.xml");
+    Files.writeString(
+        artifactMetadataPath,
+        "<metadata>\n"
+            + "  <groupId>" + groupId + "</groupId>\n"
+            + "  <artifactId>" + artifactId + "</artifactId>\n"
+            + "  <versioning>\n"
+            + "    <latest>" + version + "</latest>\n"
+            + "    <versions>\n"
+            + "      <version>" + version + "</version>\n"
+            + "    </versions>\n"
+            + "    <lastUpdated>" + updated + "</lastUpdated>\n"
+            + "  </versioning>\n"
+            + "</metadata>\n"
+    );
+
+    Path snapshotMetadataPath = snapshotDir.resolve("maven-metadata.xml");
+    Files.writeString(
+        snapshotMetadataPath,
+        "<metadata modelVersion=\"1.1.0\">\n"
+            + "  <groupId>" + groupId + "</groupId>\n"
+            + "  <artifactId>" + artifactId + "</artifactId>\n"
+            + "  <version>" + version + "</version>\n"
+            + "  <versioning>\n"
+            + "    <snapshot>\n"
+            + "      <timestamp>" + timestamp + "</timestamp>\n"
+            + "      <buildNumber>" + buildNumber + "</buildNumber>\n"
+            + "    </snapshot>\n"
+            + "    <lastUpdated>" + updated + "</lastUpdated>\n"
+            + "    <snapshotVersions>\n"
+            + "      <snapshotVersion>\n"
+            + "        <extension>jar</extension>\n"
+            + "        <value>" + resolvedVersion + "</value>\n"
+            + "        <updated>" + updated + "</updated>\n"
+            + "      </snapshotVersion>\n"
+            + "      <snapshotVersion>\n"
+            + "        <extension>pom</extension>\n"
+            + "        <value>" + resolvedVersion + "</value>\n"
+            + "        <updated>" + updated + "</updated>\n"
+            + "      </snapshotVersion>\n"
+            + "    </snapshotVersions>\n"
+            + "  </versioning>\n"
+            + "</metadata>\n"
+    );
+
+    Path snapshotPomPath = snapshotDir.resolve(artifactId + "-" + resolvedVersion + ".pom");
+    Files.writeString(
+        snapshotPomPath,
+        "<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n"
+            + "         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
+            + "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n"
+            + "  <modelVersion>4.0.0</modelVersion>\n"
+            + "  <groupId>" + groupId + "</groupId>\n"
+            + "  <artifactId>" + artifactId + "</artifactId>\n"
+            + "  <version>" + version + "</version>\n"
+            + "</project>\n"
+    );
+    Path snapshotJarPath = snapshotDir.resolve(artifactId + "-" + resolvedVersion + ".jar");
+    try (OutputStream os = Files.newOutputStream(snapshotJarPath);
+         JarOutputStream ignored = new JarOutputStream(os)) {
+      // Empty jar content is enough for snapshot artifact resolution.
+    }
+    writeSha1File(artifactMetadataPath);
+    writeSha1File(snapshotMetadataPath);
+    writeSha1File(snapshotPomPath);
+    writeSha1File(snapshotJarPath);
+  }
+
+  private static SystemPropertyOverride overrideSystemProperty(String key, String value) {
+    return new SystemPropertyOverride(key, value);
+  }
+
+  private static void writeSha1File(Path file) throws IOException {
+    try {
+      byte[] data = Files.readAllBytes(file);
+      MessageDigest digest = MessageDigest.getInstance("SHA-1");
+      byte[] sha1 = digest.digest(data);
+      StringBuilder hex = new StringBuilder(sha1.length * 2);
+      for (byte b : sha1) {
+        hex.append(String.format("%02x", b));
+      }
+      Files.writeString(file.resolveSibling(file.getFileName().toString() + ".sha1"), hex + "\n");
+    } catch (NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-1 algorithm not available", e);
+    }
+  }
+
+  private static final class SystemPropertyOverride implements AutoCloseable {
+    private final String key;
+    private final String previousValue;
+
+    private SystemPropertyOverride(String key, String value) {
+      this.key = key;
+      this.previousValue = System.getProperty(key);
+      System.setProperty(key, value);
+    }
+
+    @Override
+    public void close() {
+      if (previousValue == null) {
+        System.clearProperty(key);
+      } else {
+        System.setProperty(key, previousValue);
+      }
+    }
   }
 
   private static void createWrapper(File projectDir, String mavenHomeOutput, int exitCode) throws IOException {
