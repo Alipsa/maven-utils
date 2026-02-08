@@ -3,23 +3,23 @@
 The maven-utils artifact is based on the latest maven 3 release. As such is "should" work together with older distributions of maven. However, to ensure compatibility with older maven versions, separate artifacts are published for maven 3.9.11, 3.9.4, 3.8.4 and 3.3.9. Once a new maven version is released, a new artifact will be published for that version and the maven-utils artifact will be updated to use the latest maven version. The maven-utils artifact will always use the latest maven version and should be used if you want to use the latest features of maven. The other artifacts should be used if you want to ensure compatibility with a particular older maven version.
 
 maven-utils:
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-utils)
+[![Maven Central](https://maven-badges.sml.io/maven-central/se.alipsa/maven-utils/badge.svg)](https://maven-badges.sml.io/maven-central/se.alipsa/maven-utils)
 [![javadoc](https://javadoc.io/badge2/se.alipsa/maven-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-utils)
 
 maven-3.9.11-utils:
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.11-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.11-utils)
+[![Maven Central](https://maven-badges.sml.io/maven-central/se.alipsa/maven-3.9.11-utils/badge.svg)](https://maven-badges.sml.io/maven-central/se.alipsa/maven-3.9.11-utils)
 [![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.9.11-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.9.11-utils)
 
 maven-3.9.4-utils:
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.4-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.9.4-utils)
+[![Maven Central](https://maven-badges.sml.io/maven-central/se.alipsa/maven-3.9.4-utils/badge.svg)](https://maven-badges.sml.io/maven-central/se.alipsa/maven-3.9.4-utils)
 [![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.9.4-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.9.4-utils)
 
 maven-3.8.4-utils: 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.8.4-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.8.4-utils)
+[![Maven Central](https://maven-badges.sml.io/maven-central/se.alipsa/maven-3.8.4-utils/badge.svg)](https://maven-badges.sml.io/maven-central/se.alipsa/maven-3.8.4-utils)
 [![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.8.4-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.8.4-utils)
 
 maven-3.3.9-utils: 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.3.9-utils/badge.svg)](https://maven-badges.herokuapp.com/maven-central/se.alipsa/maven-3.3.9-utils)
+[![Maven Central](https://maven-badges.sml.io/maven-central/se.alipsa/maven-3.3.9-utils/badge.svg)](https://maven-badges.sml.io/maven-central/se.alipsa/maven-3.3.9-utils)
 [![javadoc](https://javadoc.io/badge2/se.alipsa/maven-3.3.9-utils/javadoc.svg)](https://javadoc.io/doc/se.alipsa/maven-3.3.9-utils)
 
 High level api to interact with maven from within the jvm
