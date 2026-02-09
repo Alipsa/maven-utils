@@ -7,7 +7,7 @@ fi
 if [[ ! -d build ]]; then
   mkdir "build"
 fi
-rm target/*.jar
+rm -f target/*.jar
 if command -v jdk17; then
   . jdk17
 fi

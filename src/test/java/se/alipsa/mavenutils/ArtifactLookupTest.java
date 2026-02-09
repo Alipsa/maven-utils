@@ -2,7 +2,12 @@ package se.alipsa.mavenutils;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
+
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 
 public class ArtifactLookupTest {
 
@@ -65,5 +70,28 @@ public class ArtifactLookupTest {
     String version = lookup.fetchLatestVersion("org.slf4j", "slf4j-api");
     assertNotNull(version);
     assertFalse(version.isEmpty());
+  }
+
+  @Test
+  public void testFetchLatestVersionRejectsDoctypeMetadata() throws Exception {
+    HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+    String xml = "<?xml version=\"1.0\"?>\n"
+        + "<!DOCTYPE metadata [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]>\n"
+        + "<metadata><versioning><release>&xxe;</release></versioning></metadata>";
+    server.createContext("/repo/org/slf4j/slf4j-api/maven-metadata.xml", exchange -> {
+      byte[] payload = xml.getBytes(StandardCharsets.UTF_8);
+      exchange.getResponseHeaders().set("Content-Type", "application/xml");
+      exchange.sendResponseHeaders(200, payload.length);
+      try (OutputStream os = exchange.getResponseBody()) {
+        os.write(payload);
+      }
+    });
+    server.start();
+    try {
+      ArtifactLookup lookup = new ArtifactLookup("http://localhost:" + server.getAddress().getPort() + "/repo/");
+      assertThrows(NetworkException.class, () -> lookup.fetchLatestVersion("org.slf4j", "slf4j-api"));
+    } finally {
+      server.stop(0);
+    }
   }
 }

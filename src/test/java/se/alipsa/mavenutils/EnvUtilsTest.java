@@ -52,4 +52,24 @@ public class EnvUtilsTest {
     assertEquals("true", props.getProperty("noTransferProgress"));
     assertNull(props.getProperty("unknownFlag"));
   }
+
+  @Test
+  public void parseArgumentsDoesNotConsumeFlagsAsOptionValues() {
+    Properties props = EnvUtils.parseArguments(new String[]{
+        "-P", "-q",
+        "-pl", "-am",
+        "-s", "--debug",
+        "-T", "-rf",
+        "-rf", "module-c"
+    });
+
+    assertNull(props.getProperty("profiles"));
+    assertNull(props.getProperty("projects"));
+    assertNull(props.getProperty("settings"));
+    assertNull(props.getProperty("threads"));
+    assertEquals("true", props.getProperty("quiet"));
+    assertEquals("true", props.getProperty("debug"));
+    assertEquals("true", props.getProperty("alsoMake"));
+    assertEquals("module-c", props.getProperty("resumeFrom"));
+  }
 }

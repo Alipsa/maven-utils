@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
+import org.apache.maven.model.Repository;
 import org.apache.maven.model.building.ModelBuildingException;
 import org.apache.maven.settings.building.SettingsBuildingException;
 import org.apache.maven.shared.invoker.InvocationResult;
@@ -142,6 +143,50 @@ public class MavenUtilsTest {
     assertEquals("module-c", request.getResumeFrom());
     assertNotNull(request.getArgs());
     assertTrue(request.getArgs().contains("-nsu"));
+  }
+
+  @Test
+  public void buildInvocationRequestDoesNotConsumeFlagsAsOptionValues() throws URISyntaxException {
+    File pomFile = Paths.get(getClass().getResource("/pom/simple.xml").toURI()).toFile();
+    InvocationRequest request = MavenUtils.buildInvocationRequest(
+        pomFile,
+        new String[]{"-P", "-q", "-pl", "-am", "-s", "--debug", "-T", "-rf", "-rf", "module-c", "validate"},
+        null
+    );
+
+    assertTrue(request.isQuiet());
+    assertTrue(request.isDebug());
+    assertEquals(List.of("validate"), request.getGoals());
+    assertTrue(request.getProfiles() == null || request.getProfiles().isEmpty());
+    assertTrue(request.getProjects() == null || request.getProjects().isEmpty());
+    assertNull(request.getUserSettingsFile());
+    assertNull(request.getThreads());
+    assertEquals("module-c", request.getResumeFrom());
+    assertNotNull(request.getArgs());
+    assertTrue(request.getArgs().contains("-P"));
+    assertTrue(request.getArgs().contains("-pl"));
+    assertTrue(request.getArgs().contains("-s"));
+    assertTrue(request.getArgs().contains("-T"));
+    assertTrue(request.getArgs().contains("-rf"));
+  }
+
+  @Test
+  public void getRepositoriesReplacesLegacyHttpCentralUrl() throws Exception {
+    Model model = new Model();
+    Repository repo = new Repository();
+    repo.setId("legacy-central");
+    repo.setLayout("default");
+    repo.setUrl("http://repo.maven.apache.org/maven2/");
+    model.addRepository(repo);
+
+    java.lang.reflect.Method method = MavenUtils.class.getDeclaredMethod("getRepositories", Model.class);
+    method.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    List<org.eclipse.aether.repository.RemoteRepository> repositories =
+        (List<org.eclipse.aether.repository.RemoteRepository>) method.invoke(null, model);
+
+    assertFalse(repositories.stream().anyMatch(r -> r.getUrl().startsWith("http://repo.maven.apache.org/maven2")));
+    assertTrue(repositories.stream().anyMatch(r -> r.getUrl().startsWith("https://repo1.maven.org/maven2")));
   }
 
   @Test

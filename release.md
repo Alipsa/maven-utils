@@ -2,9 +2,13 @@
 
 ## Version history
 
-### 1.4.0, In progress
+### 1.4.0, Feb 9, 2026
 - Add ArtifactLookup that enables you to fetch the latest version string of an artifact and 
   also to compare and existing artifact version with the latest
+- Harden XML parsing in `ArtifactLookup` to block external entities/DOCTYPE-based XXE input.
+- Fix argument parsing so options like `-P/-pl/-s/-T/-rf` do not consume other flags as values.
+- Normalize and replace legacy HTTP Maven Central URLs with HTTPS central when building repository lists.
+- Make `release.sh` resilient when no JARs exist yet (`rm -f target/*.jar`).
 
 ### 1.3.1, Feb 8, 2026
 - Fixed `resolveDependencies()` producing duplicate dependencies of different versions.

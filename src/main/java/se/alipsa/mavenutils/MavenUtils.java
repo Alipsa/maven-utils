@@ -568,7 +568,11 @@ public class MavenUtils {
       return value.isEmpty() ? null : value;
     }
     if (index + 1 < args.length) {
-      return args[index + 1];
+      String next = args[index + 1];
+      if (next == null || next.isBlank() || next.startsWith("-")) {
+        return null;
+      }
+      return next;
     }
     return null;
   }
@@ -1104,11 +1108,14 @@ public class MavenUtils {
     boolean addCentral = true;
     while (it.hasNext()) {
       RemoteRepository repo = it.next();
-      // a non longer valid url for central, so we deal with that below
-      if (repo.getUrl().equals("http://repo.maven.apache.org/maven2")) {
+      String normalizedUrl = normalizeRepositoryUrl(repo.getUrl());
+      // Remove insecure legacy Central endpoints; a valid HTTPS central will be added below when needed.
+      if ("http://repo.maven.apache.org/maven2".equals(normalizedUrl) || "http://repo1.maven.org/maven2".equals(normalizedUrl)) {
         it.remove();
+        continue;
       }
-      if (repo.getId().equals(CENTRAL_MAVEN_REPOSITORY.getId()) || repo.getUrl().contains(".maven.org/maven2")) {
+      if (repo.getId().equals(CENTRAL_MAVEN_REPOSITORY.getId()) || normalizedUrl.startsWith("https://")
+          && normalizedUrl.contains(".maven.org/maven2")) {
         addCentral = false;
       }
     }
@@ -1117,6 +1124,17 @@ public class MavenUtils {
       repos.add(CENTRAL_MAVEN_REPOSITORY);
     }
     return repos;
+  }
+
+  private static String normalizeRepositoryUrl(String url) {
+    if (url == null) {
+      return "";
+    }
+    String normalized = url.trim();
+    while (normalized.endsWith("/")) {
+      normalized = normalized.substring(0, normalized.length() - 1);
+    }
+    return normalized;
   }
 
   private static List<String> getClassPathElements(Model project) {

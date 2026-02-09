@@ -210,7 +210,11 @@ public class EnvUtils {
       return value.isEmpty() ? null : value;
     }
     if (index + 1 < args.length) {
-      return args[index + 1];
+      String next = args[index + 1];
+      if (next == null || next.isBlank() || next.startsWith("-")) {
+        return null;
+      }
+      return next;
     }
     return null;
   }
