@@ -29,7 +29,7 @@ Use it by adding the dependency to your maven pom, e.g:
 <dependency>
     <groupId>se.alipsa</groupId>
     <artifactId>maven-utils</artifactId>
-    <version>1.3.1</version>
+    <version>1.4.0</version>
 </dependency>
 ```
 
@@ -183,6 +183,40 @@ The method is defined as `resolveArtifact(String groupId, String artifactId, Str
 
 There is also a simplified version of resolveArtifact requiring only groupId, artifactId and version where classifier is "null" and extension is "jar".
 
+### Look up the latest version of an artifact
+
+`ArtifactLookup` fetches `maven-metadata.xml` from a Maven repository and returns the latest
+published version. It can also compare a known version against the latest one using `SemanticVersion`.
+
+```groovy
+import se.alipsa.mavenutils.ArtifactLookup;
+import se.alipsa.mavenutils.CompareResult;
+
+ArtifactLookup lookup = new ArtifactLookup(); // defaults to Maven Central
+
+// Fetch the latest version
+String latest = lookup.fetchLatestVersion("org.slf4j", "slf4j-api");
+
+// Or use a dependency string shorthand
+String latest2 = lookup.fetchLatestVersion("org.slf4j:slf4j-api");
+
+// Compare a known version against the latest
+CompareResult result = lookup.compareWithLatest("org.slf4j", "slf4j-api", "1.7.36");
+if (result.compareResult() < 0) {
+    System.out.println("A newer version is available: " + result.latestVersion());
+}
+
+// Compare using a dependency string
+CompareResult result2 = lookup.compareWithLatest("org.slf4j:slf4j-api:1.7.36");
+```
+
+A custom repository URL can be passed to the constructor:
+```groovy
+ArtifactLookup lookup = new ArtifactLookup("https://my.repo.example/maven2/");
+```
+
+`ArtifactLookup` throws `NotFoundException` when the artifact does not exist and
+`NetworkException` when the repository is unreachable.
 
 For a more elaborate explanation see [the maven documentation](https://maven.apache.org/pom.html)
 

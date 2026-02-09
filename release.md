@@ -2,6 +2,10 @@
 
 ## Version history
 
+### 1.4.0, In progress
+- Add ArtifactLookup that enables you to fetch the latest version string of an artifact and 
+  also to compare and existing artifact version with the latest
+
 ### 1.3.1, Feb 8, 2026
 - Fixed `resolveDependencies()` producing duplicate dependencies of different versions.
   The previous implementation resolved each direct dependency independently, bypassing
