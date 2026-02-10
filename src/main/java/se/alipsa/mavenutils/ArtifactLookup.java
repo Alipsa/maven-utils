@@ -123,9 +123,7 @@ public class ArtifactLookup {
       }
 
       throw new NotFoundException("No release or latest version found for " + groupId + ":" + artifactId);
-    } catch (NotFoundException e) {
-      throw e;
-    } catch (NetworkException e) {
+    } catch (NotFoundException | NetworkException e) {
       throw e;
     } catch (RuntimeException e) {
       throw new NetworkException("Failed to parse metadata XML for " + groupId + ":" + artifactId, e);
