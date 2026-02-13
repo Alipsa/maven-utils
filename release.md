@@ -2,6 +2,8 @@
 
 ## Version history
 
+### 1.4.1, In progress
+
 ### 1.4.0, Feb 9, 2026
 - Add ArtifactLookup that enables you to fetch the latest version string of an artifact and 
   also to compare and existing artifact version with the latest
