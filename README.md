@@ -29,7 +29,7 @@ Use it by adding the dependency to your maven pom, e.g:
 <dependency>
     <groupId>se.alipsa</groupId>
     <artifactId>maven-utils</artifactId>
-    <version>1.4.0</version>
+    <version>1.4.1</version>
 </dependency>
 ```
 

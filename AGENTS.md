@@ -15,7 +15,7 @@
 - `mvn versions:display-dependency-updates` – optional dependency check honoring `version-plugin-rules.xml`.
 
 ## Coding Style & Naming Conventions
-- Java 11, standard Maven layout, UTF-8 encoding.
+- Java 17, standard Maven layout, UTF-8 encoding.
 - Classes PascalCase, methods/fields camelCase, constants UPPER_SNAKE_CASE; packages lowercase (e.g., `se.alipsa.maven`).
 - Use SLF4J APIs for logging; avoid System.out in production code. Add SpotBugs nullability annotations when clarity helps.
 - Keep public APIs small and documented; align naming with Maven vocabulary (artifact, repository, resolver).
