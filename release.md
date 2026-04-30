@@ -2,7 +2,10 @@
 
 ## Version history
 
-### 1.4.1, In progress
+### 1.4.1, 2026-04-30
+- Upgrade maven-core from 3.9.12 to 3.9.15 and maven-resolver from 1.9.25 to 1.9.27.
+- Simplify redundant catch clauses in `ArtifactLookup` (merge `NotFoundException | NetworkException`).
+- Fix all 46 Javadoc warnings across `MavenUtils` and `SemanticVersion`.
 
 ### 1.4.0, Feb 9, 2026
 - Add ArtifactLookup that enables you to fetch the latest version string of an artifact and 

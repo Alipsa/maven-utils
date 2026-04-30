@@ -62,43 +62,69 @@ public class MavenUtils {
 
   private final List<RemoteRepository> remoteRepositories = new ArrayList<>();
 
+  /** How the Maven distribution was located. */
   public enum MavenDistributionMode {
+    /** Maven wrapper (mvnw) found in the project directory. */
     WRAPPER,
+    /** Explicit MAVEN_HOME directory. */
     HOME,
+    /** Default Maven installation resolved from the system PATH or environment. */
     DEFAULT
   }
 
+  /** Options controlling how Maven is discovered and invoked. */
   public static final class MavenExecutionOptions {
 
     private final File projectDir;
     private final File configuredMavenHome;
     private final boolean preferWrapper;
 
+    /** Creates default options that prefer the Maven wrapper. */
     public MavenExecutionOptions() {
       this(null, null, true);
     }
 
+    /**
+     * Creates options with the given project directory, Maven home, and wrapper preference.
+     *
+     * @param projectDir the project directory, or null to derive from the POM file
+     * @param configuredMavenHome explicit MAVEN_HOME, or null to use the environment
+     * @param preferWrapper if true, prefer the Maven wrapper when available
+     */
     public MavenExecutionOptions(@Nullable File projectDir, @Nullable File configuredMavenHome, boolean preferWrapper) {
       this.projectDir = projectDir;
       this.configuredMavenHome = configuredMavenHome;
       this.preferWrapper = preferWrapper;
     }
 
+    /**
+     * Get the project directory.
+     * @return the project directory, or null
+     */
     @Nullable
     public File getProjectDir() {
       return projectDir;
     }
 
+    /**
+     * Get the configured MAVEN_HOME.
+     * @return the configured MAVEN_HOME, or null
+     */
     @Nullable
     public File getConfiguredMavenHome() {
       return configuredMavenHome;
     }
 
+    /**
+     * Check whether the Maven wrapper should be preferred.
+     * @return true if the Maven wrapper should be preferred
+     */
     public boolean isPreferWrapper() {
       return preferWrapper;
     }
   }
 
+  /** Describes which Maven distribution was selected for an invocation. */
   public static final class MavenDistributionSelection {
 
     private final MavenDistributionMode mode;
@@ -114,26 +140,43 @@ public class MavenUtils {
       this.mavenHome = mavenHome;
     }
 
+    /**
+     * Get the distribution mode that was selected.
+     * @return the distribution mode that was selected
+     */
     public MavenDistributionMode getMode() {
       return mode;
     }
 
+    /**
+     * Get the project directory.
+     * @return the project directory, or null
+     */
     @Nullable
     public File getProjectDir() {
       return projectDir;
     }
 
+    /**
+     * Get the Maven wrapper executable.
+     * @return the Maven wrapper executable, or null if not using wrapper mode
+     */
     @Nullable
     public File getMavenExecutable() {
       return mavenExecutable;
     }
 
+    /**
+     * Get the resolved MAVEN_HOME directory.
+     * @return the resolved MAVEN_HOME directory, or null
+     */
     @Nullable
     public File getMavenHome() {
       return mavenHome;
     }
   }
 
+  /** Bundles the Maven invocation result together with distribution selection metadata. */
   public static final class MavenRunResult {
 
     private final InvocationResult invocationResult;
@@ -144,15 +187,24 @@ public class MavenUtils {
       this.distributionSelection = distributionSelection;
     }
 
+    /**
+     * Get the Maven invocation result.
+     * @return the Maven invocation result
+     */
     public InvocationResult getInvocationResult() {
       return invocationResult;
     }
 
+    /**
+     * Get the Maven distribution that was selected for this run.
+     * @return the Maven distribution that was selected for this run
+     */
     public MavenDistributionSelection getDistributionSelection() {
       return distributionSelection;
     }
   }
 
+  /** Bundles the resolved dependency files together with distribution selection metadata. */
   public static final class DependenciesResolutionResult {
 
     private final Set<File> dependencies;
@@ -163,10 +215,18 @@ public class MavenUtils {
       this.distributionSelection = distributionSelection;
     }
 
+    /**
+     * Get the resolved dependency files.
+     * @return an unmodifiable set of resolved dependency files
+     */
     public Set<File> getDependencies() {
       return dependencies;
     }
 
+    /**
+     * Get the Maven distribution that was selected for this resolution.
+     * @return the Maven distribution that was selected for this resolution
+     */
     public MavenDistributionSelection getDistributionSelection() {
       return distributionSelection;
     }
@@ -351,6 +411,15 @@ public class MavenUtils {
 
   /**
    * Run maven and return both invocation result and selected maven distribution metadata.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+   * @param javaHome the Java home to use for this invocation, or null to use the default
+   * @param options invocation options controlling wrapper/home/default selection, or null for defaults
+   * @param consoleOutputHandler where normal maven output will be sent, defaults to System.out
+   * @param warningOutputHandler where maven warning outputs will be sent, defaults to System.err
+   * @return a MavenRunResult containing the invocation result and distribution selection
+   * @throws MavenInvocationException if there is a problem with parsing or running maven
    */
   public static MavenRunResult runMavenWithSelection(final File pomFile, String[] mvnArgs,
                                                      @Nullable File javaHome,
@@ -397,6 +466,15 @@ public class MavenUtils {
 
   /**
    * Run maven with the given arguments and option-based maven distribution selection.
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param mvnArgs the arguments (targets) to send to maven (e.g. clean install)
+   * @param javaHome the Java home to use for this invocation
+   * @param options invocation options controlling wrapper/home/default selection, or null for defaults
+   * @param outConsumer consumer for standard output lines, can be null
+   * @param errConsumer consumer for error output lines, can be null
+   * @return the Maven exit code (0 for success, non-zero for failure)
+   * @throws MavenInvocationException if there is a problem with parsing or running maven
    */
   public static int runMaven(final File pomFile, String[] mvnArgs, File javaHome,
                              @Nullable MavenExecutionOptions options,
@@ -823,6 +901,14 @@ public class MavenUtils {
    * full transitive dependency graph. The effective POM model is obtained via {@link #parsePom(File)}
    * which handles property interpolation, parent inheritance, and BOM resolution.
    * </p>
+   *
+   * @param pomFile the pom.xml file to parse
+   * @param options invocation options controlling wrapper/home/default selection, or null for defaults
+   * @param includeTestScope if the first element is true, test scope dependencies will be included
+   * @return a DependenciesResolutionResult containing the resolved files and distribution selection
+   * @throws SettingsBuildingException if there was some issue with building the maven settings context
+   * @throws ModelBuildingException if there was some issue with the pom file
+   * @throws DependenciesResolveException if there was some issue resolving dependencies
    */
   public DependenciesResolutionResult resolveDependenciesWithSelection(File pomFile, @Nullable MavenExecutionOptions options,
                                                                       boolean... includeTestScope)

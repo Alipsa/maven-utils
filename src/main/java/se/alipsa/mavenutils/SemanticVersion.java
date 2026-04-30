@@ -2,10 +2,16 @@ package se.alipsa.mavenutils;
 
 import org.apache.maven.artifact.versioning.ComparableVersion;
 
+/** Wraps a version string and provides Maven-aware semantic comparison. */
 public class SemanticVersion implements Comparable<SemanticVersion> {
 
   private final String versionString;
 
+  /**
+   * Creates a SemanticVersion from the given version string.
+   *
+   * @param version the version string to wrap
+   */
   public SemanticVersion(String version) {
    this.versionString = version;
   }
