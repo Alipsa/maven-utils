@@ -4,6 +4,8 @@
 
 ### 1.4.1, 2026-04-30
 - Upgrade maven-core from 3.9.12 to 3.9.15 and maven-resolver from 1.9.25 to 1.9.27.
+- Upgrade commons-io from 2.21.0 to 2.22.0 and junit-jupiter from 6.0.2 to 6.0.3.
+- Move all dependency versions to POM properties for easier management.
 - Simplify redundant catch clauses in `ArtifactLookup` (merge `NotFoundException | NetworkException`).
 - Fix all 46 Javadoc warnings across `MavenUtils` and `SemanticVersion`.
 

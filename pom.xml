@@ -14,19 +14,21 @@
     <url>https://github.com/Alipsa/maven-utils</url>
 
     <properties>
+        <!-- Project settings -->
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>${maven.compiler.source}</maven.compiler.target>
         <maven.compiler.release>${maven.compiler.target}</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- Dependency versions -->
+        <commons-io.version>2.22.0</commons-io.version>
+        <junit.version>6.0.3</junit.version>
+        <maven-core.version>3.9.15</maven-core.version>
+        <maven-invoker.version>3.3.0</maven-invoker.version>
+        <maven-resolver.version>1.9.27</maven-resolver.version>
+        <maven-shared-utils.version>3.4.2</maven-shared-utils.version>
         <slf4j.version>2.0.17</slf4j.version>
         <spotbugs-annotations.version>4.9.8</spotbugs-annotations.version>
-        <maven-invoker.version>3.3.0</maven-invoker.version>
-        <maven-shared-utils.version>3.4.2</maven-shared-utils.version>
-        <commons-io.version>2.22.0</commons-io.version>
-        <maven-core.version>3.9.15</maven-core.version>
-        <maven-resolver.version>1.9.27</maven-resolver.version>
-        <junit.version>6.0.3</junit.version>
     </properties>
 
     <licenses>
